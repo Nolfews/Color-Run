@@ -28,6 +28,7 @@ Game::Game() :
             }
         }
     }
+    initGameEntities();
     setupEventHandlers();
     loadLevel(_currentLevel);
 }
@@ -35,14 +36,13 @@ Game::Game() :
 void Game::run()
 {
     while (_window->isOpen()) {
+        float deltaTime = _gameClock.restart().asSeconds();
+
         _window->handleEvents();
-        _window->clear(sf::Color(50, 50, 50));
 
-        if (_map) {
-            _map->draw(_window->getWindow());
-        }
+        updateGame(deltaTime);
 
-        _window->display();
+        renderGame();
     }
 }
 
@@ -98,4 +98,51 @@ bool Game::previousLevel()
     }
     std::cout << "You are already at the first level!" << std::endl;
     return false;
+}
+
+void Game::initGameEntities()
+{
+    // Initialiser l'état des couleurs
+    _colorState = std::make_shared<Color>(Color_t::WHITE);
+    
+    // Créer le joueur à sa position de départ
+    _player = std::make_unique<Player>(100.0f, 900.0f);
+    _player->setColor(_colorState);
+    
+    // Créer l'ennemi
+    _enemy = std::make_unique<Enemy>(100, 100, _colorState, _window->getWindow());
+}
+
+void Game::updateGame(float deltaTime)
+{
+    // Mettre à jour le joueur
+    if (_player) {
+        _player->handleInput();
+        _player->update(deltaTime);
+    }
+    
+    // Ici, vous pourrez ajouter la mise à jour d'autres entités du jeu
+    // comme la détection de collisions, etc.
+}
+
+void Game::renderGame()
+{
+    _window->clear(sf::Color(50, 50, 50));
+    
+    // Dessiner la carte si elle existe
+    if (_map) {
+        _map->draw(_window->getWindow());
+    }
+    
+    // Dessiner le joueur
+    if (_player) {
+        _player->draw(*_window->getWindow());
+    }
+    
+    // Dessiner l'ennemi
+    if (_enemy) {
+        _enemy->draw();
+    }
+    
+    _window->display();
 }
