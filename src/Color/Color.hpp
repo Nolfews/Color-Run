@@ -23,7 +23,8 @@ class Color {
     public:
         Color();
         Color(Color_t color);
-        ~Color() = default;
+        ~Color();
+
         Color_t getColor() const;
         void setColor(Color_t newColor);
 
