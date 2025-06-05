@@ -6,27 +6,22 @@
 */
 
 #include "player.hpp"
+#include <iostream>
 
-Player::Player()
+Player::Player(float startX, float startY)
+    : _position(startX, startY)
+    , _velocity(0.0f, 0.0f)
+    , _maxVelocity(MOVE_SPEED, 600.0f)
+    , _isOnGround(false)
+    , _spacePressed(false)
+    , _life(3)
+    , _score(0)
+    , _color(std::make_shared<Color>())
 {
-    _x = 0;
-    _y = 0;
-    _life = 3;
-    _score = 0;
-    _color = std::make_shared<Color>();
-    _isOnGround = false;
-    _spacePressed = false;
-
-    _velocity = sf::Vector2f(0, 0);
-    _acceleration = sf::Vector2f(0, 0);
-    _gravity = sf::Vector2f(0, 500.0f);
-    _maxVelocity = sf::Vector2f(300.0f, 600.0f);
-
-    _shape.setSize(sf::Vector2f(64, 64));
+    _shape.setSize(sf::Vector2f(PLAYER_SIZE, PLAYER_SIZE));
     _shape.setFillColor(sf::Color::White);
-    _shape.setPosition(static_cast<float>(_x), static_cast<float>(_y));
+    _shape.setPosition(_position);
 }
-
 
 Player::~Player()
 {
@@ -62,52 +57,33 @@ void Player::setScore(int newScore)
     _score = newScore;
 }
 
-void Player::applyGravity(float deltaTime)
+sf::Vector2f Player::getPosition() const
 {
-    _velocity += _gravity * deltaTime;
+    return _position;
 }
 
-void Player::move(int dx, int dy)
+sf::FloatRect Player::getBounds() const
 {
-    _x += dx;
-    _y += dy;
-    _shape.setPosition(static_cast<float>(_x), static_cast<float>(_y));
-    // texture
+    return _shape.getGlobalBounds();
 }
 
-void Player::draw(sf::RenderWindow &window)
+bool Player::isOnGround() const
 {
-    window.draw(_shape);
-}
-
-void Player::jump()
-{
-    if (_isOnGround) {
-        _velocity.y = -350.0f;
-        _isOnGround = false;
-    }
-}
-
-void Player::teleport(int x, int y)
-{
-    _x = x;
-    _y = y;
-    _shape.setPosition(static_cast<float>(_x), static_cast<float>(_y));
-    // texture
+    return _isOnGround;
 }
 
 void Player::handleInput()
 {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
-        _velocity.x = -200.0f;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q) || sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+        _velocity.x = -MOVE_SPEED;
     } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-        _velocity.x = 200.0f;
+        _velocity.x = MOVE_SPEED;
     } else {
-        _velocity.x *= 0.9f;
+        applyFriction(1.0f / 60.0f);
     }
 
     bool spaceCurrentlyPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Space);
-    if (spaceCurrentlyPressed && !_spacePressed) {
+    if (spaceCurrentlyPressed && !_spacePressed && _isOnGround) {
         jump();
     }
     _spacePressed = spaceCurrentlyPressed;
@@ -130,25 +106,115 @@ void Player::update(float deltaTime)
         _velocity.y = -_maxVelocity.y;
     }
 
-    _x += static_cast<int>(_velocity.x * deltaTime);
-    _y += static_cast<int>(_velocity.y * deltaTime);
+    updatePosition(deltaTime);
+    checkBounds();
+    checkGroundCollision();
+    updateVisuals();
+}
 
-    // je laisse les bordures de l'écran pour le player
-    if (_y >= 1016) {
-        _y = 1016;
-        _velocity.y = 0;
-        _isOnGround = true;
-    } else if (_y < 1016 && _velocity.y > 0) {
+void Player::draw(sf::RenderWindow &window)
+{
+    window.draw(_shape);
+}
+
+void Player::jump()
+{
+    if (_isOnGround) {
+        _velocity.y = JUMP_FORCE;
         _isOnGround = false;
     }
+}
 
-    if (_x < 0) {
-        _x = 0;
+void Player::takeDamage(int damage)
+{
+    _life -= damage;
+    if (_life < 0) {
+        _life = 0;
+    }
+}
+
+void Player::addScore(int points)
+{
+    _score += points;
+}
+
+void Player::teleport(float x, float y)
+{
+    _position.x = x;
+    _position.y = y;
+    updateVisuals();
+}
+
+void Player::reset()
+{
+    _position = sf::Vector2f(100.0f, 900.0f);
+    _velocity = sf::Vector2f(0.0f, 0.0f);
+    _life = 3;
+    _score = 0;
+    _isOnGround = false;
+    _spacePressed = false;
+    updateVisuals();
+}
+
+void Player::applyGravity(float deltaTime)
+{
+    _velocity.y += GRAVITY * deltaTime;
+}
+
+void Player::applyFriction(float deltaTime)
+{
+    _velocity.x *= FRICTION;
+
+    if (std::abs(_velocity.x) < 1.0f) {
+        _velocity.x = 0.0f;
+    }
+}
+
+void Player::updatePosition(float deltaTime)
+{
+    _position += _velocity * deltaTime;
+}
+
+void Player::checkBounds()
+{
+    if (_position.x < 0) {
+        _position.x = 0;
         _velocity.x = 0;
-    } else if (_x > 1856) {
-        _x = 1856;
+    } else if (_position.x > SCREEN_WIDTH - PLAYER_SIZE) {
+        _position.x = SCREEN_WIDTH - PLAYER_SIZE;
         _velocity.x = 0;
     }
+}
 
-    _shape.setPosition(static_cast<float>(_x), static_cast<float>(_y));
+void Player::checkGroundCollision()
+{
+    if (_position.y >= GROUND_Y) {
+        _position.y = GROUND_Y;
+        _velocity.y = 0;
+        _isOnGround = true;
+    } else if (_position.y < GROUND_Y && _velocity.y > 0) {
+        _isOnGround = false;
+    }
+}
+
+void Player::updateVisuals()
+{
+    _shape.setPosition(_position);
+    if (_color) {
+        switch (_color->getColor()) {
+            case Color_t::RED:
+                _shape.setFillColor(sf::Color::Red);
+                break;
+            case Color_t::GREEN:
+                _shape.setFillColor(sf::Color::Green);
+                break;
+            case Color_t::BLUE:
+                _shape.setFillColor(sf::Color::Blue);
+                break;
+            case Color_t::WHITE:
+            default:
+                _shape.setFillColor(sf::Color::White);
+                break;
+        }
+    }
 }
