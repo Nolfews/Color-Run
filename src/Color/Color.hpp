@@ -24,7 +24,6 @@ class Color {
         Color();
         Color(Color_t color);
         ~Color();
-
         Color_t getColor() const;
         void setColor(Color_t newColor);
 
