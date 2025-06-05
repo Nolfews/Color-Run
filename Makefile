@@ -19,7 +19,9 @@ SRC =	main.cpp					\
 		src/player/player.cpp		\
 		src/map/map.cpp				\
 		src/game/game.cpp			\
-		src/event/event.cpp
+		src/event/event.cpp			\
+		src/Color/Color.cpp 		\
+		src/enemy/Enemy.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
