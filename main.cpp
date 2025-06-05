@@ -7,23 +7,21 @@
 
 #include <iostream>
 #include "src/window/window.hpp"
+#include "src/player/player.hpp"
 
 int main()
 {
     try {
         Window window(1920, 1080, "Color Run");
-        sf::RectangleShape cube(sf::Vector2f(64.0f, 64.0f));
-        cube.setFillColor(sf::Color::Red);
-        cube.setPosition(
-            (1920.0f / 2) - (32.0f / 2),
-            (1080.0f / 2) - (32.0f / 2)
-        );
+        Player player;
 
         while (window.isOpen()) {
             window.handleEvents();
+            player.handleInput();
+            
             window.clear(sf::Color(50, 50, 50));
-
-            window.getWindow().draw(cube);
+            player.update(1.0f / 60.0f);
+            player.draw(window.getWindow());
             window.display();
         }
     } catch (const std::exception& e) {
