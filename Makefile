@@ -16,7 +16,9 @@ NC=\033[0m
 
 SRC =	main.cpp					\
 		src/window/window.cpp		\
-		src/player/player.cpp
+		src/Color/Color.cpp 		\
+		src/player/player.cpp		\
+		src/enemy/Enemy.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
