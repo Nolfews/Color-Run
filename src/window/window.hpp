@@ -9,6 +9,8 @@
 
 #include <SFML/Graphics.hpp>
 #include <string>
+#include <functional>
+#include <memory>
 
 class Window {
 public:
@@ -19,10 +21,16 @@ public:
     void display();
     bool isOpen() const;
     void handleEvents();
-    sf::RenderWindow& getWindow();
+    std::shared_ptr<sf::RenderWindow> getWindow();
+
+    void setKeyPressedCallback(std::function<void(sf::Keyboard::Key)> callback);
+    void setKeyReleasedCallback(std::function<void(sf::Keyboard::Key)> callback);
 
 private:
-    sf::RenderWindow _window;
+    std::shared_ptr<sf::RenderWindow> _window;
     sf::Event _event;
+
+    std::function<void(sf::Keyboard::Key)> _keyPressedCallback;
+    std::function<void(sf::Keyboard::Key)> _keyReleasedCallback;
 };
 
