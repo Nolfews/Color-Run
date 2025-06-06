@@ -125,6 +125,7 @@ private:
     void renderGameOver();
     void checkPlayerSpecialTileCollisions();
     void createEnemiesFromMap();
+    void createCoinsFromMap();
 
 private:
     std::unique_ptr<Window> _window;

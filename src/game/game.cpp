@@ -129,6 +129,7 @@ void Game::loadLevel(int levelNumber)
 
         createPlatformsFromMap();
         createEnemiesFromMap();
+        createCoinsFromMap();
 
         if (_player) {
             _player->setMapReference(_map);
@@ -724,6 +725,26 @@ void Game::createEnemiesFromMap()
     std::cout << "Created " << _enemies.size() << " enemies from map" << std::endl;
 }
 
+void Game::createCoinsFromMap()
+{
+    if (!_map) {
+        return;
+    }
+    _coins.clear();
+    std::vector<sf::Vector2f> coinPositions = _map->getCoinPositions();
+    for (const sf::Vector2f& pos : coinPositions) {
+        auto coin = std::make_unique<Coins>(
+            static_cast<int>(pos.x),
+            static_cast<int>(pos.y),
+            1,
+            _window->getWindow(),
+            _player
+        );
+        _coins.push_back(std::move(coin));
+    }
+    std::cout << "Created " << _coins.size() << " coins from map" << std::endl;
+}
+
 void Game::updateLevelDisplay()
 {
     sf::Vector2u Window = _window->getWindow()->getSize();
@@ -1295,6 +1316,7 @@ void Game::recreateGameEntities()
     }
     if (_map) {
         createEnemiesFromMap();
+        createCoinsFromMap();
     }
 }
 

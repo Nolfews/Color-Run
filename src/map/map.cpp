@@ -43,7 +43,7 @@ bool Map::loadFromFile(const std::string &levelPath)
                 case MAGENTA_TILE: tile.color = MAGENTA; break;
                 case WHITE_TILE:   tile.color = WHITE; break;
                 case BLACK_TILE:   tile.color = BLACK; break;
-                default:           tile.color = WHITE; break;
+                default:           tile.color = TRANSPARENT; break;
             }
 
             tile.shape.setSize(sf::Vector2f(_tileSize, _tileSize));
@@ -58,9 +58,13 @@ bool Map::loadFromFile(const std::string &levelPath)
             if (tile.type == SPAWN) {
                 _spawnPosition = sf::Vector2f(x * _tileSize, y * _tileSize);
             }
-            
+
             if (tile.type == ENEMY) {
                 _enemyPositions.push_back(sf::Vector2f(x * _tileSize, y * _tileSize));
+            }
+
+            if (tile.type == COIN) {
+                _coinPositions.push_back(sf::Vector2f(x * _tileSize, y * _tileSize));
             }
 
             row.push_back(tile);
@@ -79,7 +83,7 @@ void Map::draw(std::shared_ptr<sf::RenderWindow> window, std::shared_ptr<Color> 
         for (const auto &tile : row) {
             bool shouldDraw = false;
 
-            if (tile.type != EMPTY && tile.type != INVISIBLE_BOUNDARY) {
+            if (tile.type != EMPTY && tile.type != INVISIBLE_BOUNDARY && tile.type != COIN) {
                 if (tile.type == SPAWN || tile.type == FINISH || tile.type == TRAP) {
                     shouldDraw = true;
                 } else if (enemyMode) {
@@ -107,6 +111,11 @@ std::vector<sf::Vector2f> Map::getEnemyPositions() const
     return _enemyPositions;
 }
 
+std::vector<sf::Vector2f> Map::getCoinPositions() const
+{
+    return _coinPositions;
+}
+
 std::vector<std::vector<Tile>> &Map::getTiles()
 {
     return _tiles;
@@ -119,6 +128,7 @@ void Map::initializeTileColors()
     _tileColors[FINISH]      = sf::Color(255, 215, 0);    // Gold
     _tileColors[TRAP]        = sf::Color(139, 0, 0);      // Dark Red
     _tileColors[ENEMY]       = sf::Color(34, 241, 53);    // Green (like Enemy)
+    _tileColors[COIN]        = sf::Color(255, 215, 0);    // Gold (like coins)
     _tileColors[RED_TILE]    = sf::Color(255, 0, 0);     // Red
     _tileColors[GREEN_TILE]  = sf::Color(0, 255, 0);     // Green
     _tileColors[BLUE_TILE]   = sf::Color(0, 0, 255);     // Blue
@@ -138,6 +148,7 @@ TileType Map::charToTileType(char c)
         case 'F': return FINISH;
         case 'Q': return TRAP;
         case 'E': return ENEMY;
+        case 'C': return COIN;         // COIN
         case '1': return RED_TILE;     // RED
         case '2': return GREEN_TILE;   // GREEN
         case '3': return BLUE_TILE;    // BLUE
@@ -167,7 +178,7 @@ sf::Color Map::convertColor(Color_t color)
         case MAGENTA: return sf::Color(255, 0, 255);
         case WHITE:   return sf::Color(255, 255, 255);
         case BLACK:   return sf::Color(0, 0, 0);
-        default:      return sf::Color::White;
+        default:      return sf::Color::Transparent;
     }
 }
 
