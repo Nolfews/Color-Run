@@ -794,6 +794,7 @@ void Game::checkSpecialTileCollisions()
                         }
 
                         if (_player->getLife() <= 0) {
+                            _gameOver = true;
                             std::cout << "Game Over!" << std::endl;
                         }
                     } else if (tile.type == FINISH) {
