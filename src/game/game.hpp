@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 #include <SFML/System/Clock.hpp>
+#include <SFML/Audio.hpp>
 #include "window/window.hpp"
 #include "map/map.hpp"
 #include "player/player.hpp"
@@ -51,6 +52,13 @@ private:
     void renderColorOverlay();
     void updateCamera();
     void updateLivesDisplay();
+    void updateLevelDisplay();
+    void checkPlayerEnemyCollision();
+    void resetPlayerToSpawn();
+    void handlePlayerDeath();
+    void renderGameOver();
+    void checkPlayerSpecialTileCollisions();
+    void createEnemiesFromMap();
 
 private:
     std::unique_ptr<Window> _window;
@@ -77,12 +85,14 @@ private:
     sf::CircleShape _currentColorIndicator;
     sf::RectangleShape _colorOverlay;
     sf::View _cameraView;
+    bool _pendingLevelChange;
 
     bool _enemyMode;
     bool _gameOver;
     sf::Text _gameOverText;
     sf::Text _finalScoreText;
     sf::Text _scoreText;
+    sf::Music _backgroundMusic;
 };
 
 
