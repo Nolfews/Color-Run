@@ -62,6 +62,7 @@ class Player {
         std::shared_ptr<Color> _color;
         sf::RectangleShape _shape;
         sf::Texture _texture;
+        sf::Clock _clock;
         void applyGravity(float deltaTime);
         void applyFriction(float deltaTime);
         void updatePosition(float deltaTime);
@@ -69,4 +70,6 @@ class Player {
         void checkGroundCollision();
         void updateVisuals();
         void handlePlatformCollision(Platform* platform, const sf::FloatRect& platformBounds);
+        void handleMovement();
+        void handleAerialMovement();
 };
