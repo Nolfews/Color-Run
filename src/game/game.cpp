@@ -436,6 +436,7 @@ void Game::renderGame()
     if (_font.getInfo().family != "") {
         _window->getWindow()->draw(_modeText);
         _window->getWindow()->draw(_livesText);
+        _window->getWindow()->draw(_scoreText);
         _window->getWindow()->draw(_levelText);
     }
 
