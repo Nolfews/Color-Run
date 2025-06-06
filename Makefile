@@ -14,11 +14,12 @@ RED=\033[1;31m
 YELLOW=\033[1;33m
 NC=\033[0m
 
-SRC =	main.cpp					\
-		src/window/window.cpp		\
-		src/Color/Color.cpp 		\
-		src/player/player.cpp		\
-		src/enemy/Enemy.cpp
+SRC =	main.cpp						\
+		src/window/window.cpp			\
+		src/Color/Color.cpp 			\
+		src/player/player.cpp			\
+		src/enemy/Enemy.cpp				\
+		src/platform/Platform.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
