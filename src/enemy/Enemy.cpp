@@ -42,6 +42,11 @@ sf::RectangleShape Enemy::getShape() const
     return _shape;
 }
 
+sf::FloatRect Enemy::getBounds() const
+{
+    return _shape.getGlobalBounds();
+}
+
 void Enemy::setPosition(int x, int y)
 {
     _x = x;

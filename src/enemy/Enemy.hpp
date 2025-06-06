@@ -20,6 +20,7 @@ class Enemy {
 
         sf::Vector2f getPosition() const;
         sf::RectangleShape getShape() const;
+        sf::FloatRect getBounds() const;
         void setPosition(int x, int y);
         void draw();
         void draw(bool enemyMode);

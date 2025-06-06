@@ -51,13 +51,12 @@ private:
     void renderColorOverlay();
     void updateCamera();
     void updateLivesDisplay();
-    void updateLevelDisplay();
 
 private:
     std::unique_ptr<Window> _window;
     std::shared_ptr<Map> _map;
     std::unique_ptr<Player> _player;
-    std::unique_ptr<Enemy> _enemy;
+    std::vector<std::unique_ptr<Enemy>> _enemies;
     std::shared_ptr<Color> _colorState;
     std::vector<std::unique_ptr<Platform>> _platforms;
     std::vector<Color_t> _availableColors;
@@ -78,9 +77,12 @@ private:
     sf::CircleShape _currentColorIndicator;
     sf::RectangleShape _colorOverlay;
     sf::View _cameraView;
-    bool _pendingLevelChange;
 
     bool _enemyMode;
+    bool _gameOver;
+    sf::Text _gameOverText;
+    sf::Text _finalScoreText;
+    sf::Text _scoreText;
 };
 
 
