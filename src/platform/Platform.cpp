@@ -62,12 +62,43 @@ void Platform::draw()
     _window->draw(_platform);
 }
 
+void Platform::draw(bool enemyMode)
+{
+    if (enemyMode) {
+        if (_color == BLACK || _color == WHITE) {
+            sf::Color currentColor = _platform.getFillColor();
+            currentColor.a = 255;
+            _platform.setFillColor(currentColor);
+            _window->draw(_platform);
+        }
+    } else {
+        if (_colorState->getColor() == _color || _color == BLACK || _color == WHITE) {
+            sf::Color currentColor = _platform.getFillColor();
+            currentColor.a = 255;
+            _platform.setFillColor(currentColor);
+            _window->draw(_platform);
+        }
+    }
+}
+
 bool Platform::shouldCollideWithPlayer() const
 {
     if (_color == BLACK || _color == WHITE) {
         return true;
     }
     return _colorState->getColor() == _color;
+}
+
+bool Platform::shouldCollideWithPlayer(bool enemyMode) const
+{
+    if (enemyMode) {
+        return (_color == BLACK || _color == WHITE);
+    } else {
+        if (_color == BLACK || _color == WHITE) {
+            return true;
+        }
+        return _colorState->getColor() == _color;
+    }
 }
 
 Color_t Platform::getColor() const

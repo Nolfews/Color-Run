@@ -24,7 +24,9 @@ class Platform {
         sf::FloatRect getBounds() const;
         void setPosition(int x, int y);
         void draw();
+        void draw(bool enemyMode);
         bool shouldCollideWithPlayer() const;
+        bool shouldCollideWithPlayer(bool enemyMode) const;
         Color_t getColor() const;
 
     private:

@@ -25,13 +25,14 @@
 class Game {
 public:
     Game();
-    ~Game() = default;
+    ~Game();
 
     void run();
     void loadLevel(int levelNumber);
     bool nextLevel();
     bool previousLevel();
     int getCurrentLevel() const;
+    bool isEnemyMode() const;
 
 private:
     void setupEventHandlers();
@@ -43,7 +44,11 @@ private:
     void cycleColor(int direction);
     void renderColorIndicators();
     void updateColorCirclesPositions();
+    void checkPlayerPlatformValidity();
     sf::Color getColorFromEnum(Color_t colorEnum);
+    void renderColorOverlay();
+    void updateCamera();
+    void updateLivesDisplay();
 
 private:
     std::unique_ptr<Window> _window;
@@ -56,13 +61,21 @@ private:
     int _currentColorIndex;
     sf::Font _font;
     sf::Text _colorText;
+    sf::Text _modeText;
+    sf::Text _livesText;
+    sf::Texture _colorModeTexture;
+    sf::Texture _enemyModeTexture;
+    sf::Sprite _modeIcon;
     sf::Clock _gameClock;
     int _currentLevel;
     int _maxLevel;
     std::string _levelBasePath;
-    // Nouveaux membres pour l'affichage des couleurs
     std::vector<sf::CircleShape> _colorCircles;
     sf::CircleShape _currentColorIndicator;
+    sf::RectangleShape _colorOverlay;
+    sf::View _cameraView;
+
+    bool _enemyMode;
 };
 
 

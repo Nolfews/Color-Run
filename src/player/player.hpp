@@ -27,11 +27,8 @@ class Platform;
 
 class Player {
     public:
-        // Constructeurs et destructeur
         Player(float startX = 100.0f, float startY = 900.0f);
         ~Player();
-
-        // Getters et setters
         std::shared_ptr<Color> getColor() const;
         void setColor(std::shared_ptr<Color> newColor);
         int getLife() const;
@@ -42,38 +39,30 @@ class Player {
         sf::FloatRect getBounds() const;
         bool isOnGround() const;
 
-        // Méthodes principales
         void handleInput();
         void update(float deltaTime);
         void draw(sf::RenderWindow &window);
         void checkPlatformCollisions(const std::vector<std::unique_ptr<Platform>>& platforms);
-
-        // Actions du joueur
+        void checkPlatformCollisions(const std::vector<std::unique_ptr<Platform>>& platforms, bool enemyMode);
         void jump();
         void takeDamage(int damage = 1);
         void addScore(int points);
         void teleport(float x, float y);
         void reset();
+        void setGroundState(bool onGround);
 
     private:
-        // Position et mouvement
         sf::Vector2f _position;
         sf::Vector2f _velocity;
         sf::Vector2f _maxVelocity;
-
-        // État du joueur
         bool _isOnGround;
         bool _spacePressed;
         int _life;
         int _score;
         std::shared_ptr<Color> _color;
-
-        // Rendu
         sf::RectangleShape _shape;
         sf::Texture _texture;
         sf::Clock _clock;
-
-        // Méthodes privées
         void applyGravity(float deltaTime);
         void applyFriction(float deltaTime);
         void updatePosition(float deltaTime);

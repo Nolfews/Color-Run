@@ -178,6 +178,11 @@ void Player::reset()
     updateVisuals();
 }
 
+void Player::setGroundState(bool onGround)
+{
+    _isOnGround = onGround;
+}
+
 void Player::applyGravity(float deltaTime)
 {
     _velocity.y += GRAVITY * deltaTime;
@@ -273,6 +278,32 @@ void Player::checkPlatformCollisions(const std::vector<std::unique_ptr<Platform>
             continue;
         }
         if (!platform->shouldCollideWithPlayer()) {
+            continue;
+        }
+        if (playerBounds.intersects(platformBounds)) {
+            handlePlatformCollision(platform.get(), platformBounds);
+        }
+    }
+}
+
+void Player::checkPlatformCollisions(const std::vector<std::unique_ptr<Platform>>& platforms, bool enemyMode)
+{
+    sf::FloatRect playerBounds = getBounds();
+
+    float searchRadius = PLAYER_SIZE * 2.0f;
+    sf::FloatRect searchArea(
+        _position.x - searchRadius,
+        _position.y - searchRadius,
+        PLAYER_SIZE + 2 * searchRadius,
+        PLAYER_SIZE + 2 * searchRadius
+    );
+    for (const auto& platform : platforms) {
+        if (!platform) continue;
+        sf::FloatRect platformBounds = platform->getBounds();
+        if (!searchArea.intersects(platformBounds)) {
+            continue;
+        }
+        if (!platform->shouldCollideWithPlayer(enemyMode)) {
             continue;
         }
         if (playerBounds.intersects(platformBounds)) {
