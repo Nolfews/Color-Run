@@ -418,7 +418,7 @@ void Player::handleMovement()
     } else if (f < 0.6f) {
         _texture.loadFromFile("assets/img/walk.png", sf::IntRect(128, 0, 64, 64));
     } else if (f < 0.8f) {
-        _texture.loadFromFile("assets/walk.png", sf::IntRect(192, 0, 64, 64));
+        _texture.loadFromFile("assets/img/walk.png", sf::IntRect(192, 0, 64, 64));
     } else if (f < 1.0f) {
         _texture.loadFromFile("assets/img/walk.png", sf::IntRect(256, 0, 64, 64));
     } else if (f < 1.2f) {
