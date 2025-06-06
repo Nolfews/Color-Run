@@ -10,6 +10,10 @@
 #include "../Color/Color.hpp"
 #include <memory>
 #include <SFML/Graphics.hpp>
+#include <vector>
+
+// Forward declaration
+class Platform;
 
 #define GROUND_Y 950.0f
 #define SCREEN_WIDTH 1920.0f
@@ -42,6 +46,7 @@ class Player {
         void handleInput();
         void update(float deltaTime);
         void draw(sf::RenderWindow &window);
+        void checkPlatformCollisions(const std::vector<std::unique_ptr<Platform>>& platforms);
         
         // Actions du joueur
         void jump();
@@ -74,4 +79,5 @@ class Player {
         void checkBounds();
         void checkGroundCollision();
         void updateVisuals();
+        void handlePlatformCollision(Platform* platform, const sf::FloatRect& platformBounds);
 };

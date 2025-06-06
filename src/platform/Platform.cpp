@@ -39,6 +39,11 @@ sf::RectangleShape Platform::getShape() const
     return _platform;
 }
 
+sf::FloatRect Platform::getBounds() const
+{
+    return _platform.getGlobalBounds();
+}
+
 void Platform::setPosition(int x, int y)
 {
     _x = x;
@@ -48,9 +53,26 @@ void Platform::setPosition(int x, int y)
 
 void Platform::draw()
 {
-    if (_colorState->getColor() != _color)
+    if (!(_colorState->getColor() == _color || _color == BLACK || _color == WHITE)) {
         return;
+    }
+    sf::Color currentColor = _platform.getFillColor();
+    currentColor.a = 255;
+    _platform.setFillColor(currentColor);
     _window->draw(_platform);
+}
+
+bool Platform::shouldCollideWithPlayer() const
+{
+    if (_color == BLACK || _color == WHITE) {
+        return true;
+    }
+    return _colorState->getColor() == _color;
+}
+
+Color_t Platform::getColor() const
+{
+    return _color;
 }
 
 void Platform::setColor(Color_t color)
@@ -82,6 +104,6 @@ void Platform::setColor(Color_t color)
             _platform.setFillColor(sf::Color(0, 0, 0));
             break;
         default:
-            _platform.setFillColor(sf::Color(128, 128, 128)); // Default to gray if color is unknown
+            _platform.setFillColor(sf::Color(128, 128, 128));
     }
 }
