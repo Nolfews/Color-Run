@@ -22,6 +22,7 @@ class Enemy {
         sf::RectangleShape getShape() const;
         void setPosition(int x, int y);
         void draw();
+        void draw(bool enemyMode);
 
     private:
         int _x;

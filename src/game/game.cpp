@@ -14,7 +14,8 @@ Game::Game() :
     _window(std::make_unique<Window>(1280, 720, "Color Run")),
     _currentLevel(1),
     _maxLevel(0),
-    _levelBasePath("assets/levels/level_")
+    _levelBasePath("assets/levels/level_"),
+    _enemyMode(false)
 {
     for (const auto& entry : std::filesystem::directory_iterator("assets/levels/")) {
         const std::string& path = entry.path().string();
@@ -29,6 +30,8 @@ Game::Game() :
         }
     }
     initGameEntities();
+    _cameraView.setSize(1280, 720);
+    _cameraView.setCenter(640, 360);
     setupEventHandlers();
     loadLevel(_currentLevel);
 }
@@ -73,6 +76,11 @@ int Game::getCurrentLevel() const
     return _currentLevel;
 }
 
+bool Game::isEnemyMode() const
+{
+    return _enemyMode;
+}
+
 void Game::setupEventHandlers()
 {
     _window->setKeyPressedCallback([this](sf::Keyboard::Key key) {
@@ -80,6 +88,7 @@ void Game::setupEventHandlers()
     });
     _window->setResizeCallback([this](unsigned int width, unsigned int height) {
         updateColorCirclesPositions();
+        updateLivesDisplay();
     });
 }
 
@@ -93,6 +102,14 @@ void Game::handleKeyPressed(sf::Keyboard::Key key)
         nextLevel();
     } else if (key == sf::Keyboard::Down) {
         previousLevel();
+    } else if (key == sf::Keyboard::Tab) {
+        _enemyMode = !_enemyMode;
+        if (_enemyMode) {
+            _modeIcon.setTexture(_enemyModeTexture);
+        } else {
+            _modeIcon.setTexture(_colorModeTexture);
+        }
+        checkPlayerPlatformValidity();
     }
 }
 
@@ -109,7 +126,10 @@ bool Game::previousLevel()
 
 void Game::initGameEntities()
 {
-    _availableColors = {Color_t::RED, Color_t::GREEN, Color_t::BLUE, Color_t::YELLOW, Color_t::CYAN, Color_t::MAGENTA, Color_t::WHITE};
+    if (!_font.loadFromFile("goffy.TTF")) {
+        std::cout << "Warning: Could not load goffy.TTF font, text may not display properly" << std::endl;
+    }
+    _availableColors = {Color_t::RED, Color_t::GREEN, Color_t::BLUE, Color_t::YELLOW, Color_t::CYAN, Color_t::MAGENTA};
     _currentColorIndex = 0;
     _colorState = std::make_shared<Color>(_availableColors[_currentColorIndex]);
     createTestPlatforms();
@@ -119,13 +139,34 @@ void Game::initGameEntities()
     _colorText.setCharacterSize(24);
     _colorText.setFillColor(sf::Color::White);
     _colorText.setPosition(10, 10);
-    
-    // Initialiser les cercles de couleurs
+    if (_font.getInfo().family != "") {
+        _colorText.setFont(_font);
+    }
+    if (!_colorModeTexture.loadFromFile("assets/img/color.png")) {
+        std::cout << "Warning: Could not load color.png texture" << std::endl;
+    }
+    if (!_enemyModeTexture.loadFromFile("assets/img/loupe.png")) {
+        std::cout << "Warning: Could not load loupe.png texture" << std::endl;
+    }
+    _modeIcon.setTexture(_colorModeTexture);
+    _modeIcon.setPosition(10, 40);
+    _modeIcon.setScale(0.5f, 0.5f);
+    _modeText.setCharacterSize(20);
+    _modeText.setFillColor(sf::Color::Yellow);
+    _modeText.setPosition(60, 45);
+    if (_font.getInfo().family != "") {
+        _modeText.setFont(_font);
+    }
+
+    _livesText.setCharacterSize(24);
+    _livesText.setFillColor(sf::Color::Red);
+    if (_font.getInfo().family != "") {
+        _livesText.setFont(_font);
+    }
     _colorCircles.clear();
     float windowWidth = _window->getWindow()->getSize().x;
     float totalWidth = (_availableColors.size() - 1) * CIRCLE_SPACING;
     float startX = (windowWidth - totalWidth) / 2.0f;
-    
     for (size_t i = 0; i < _availableColors.size(); ++i) {
         sf::CircleShape circle(CIRCLE_RADIUS);
         circle.setFillColor(getColorFromEnum(_availableColors[i]));
@@ -134,16 +175,16 @@ void Game::initGameEntities()
         circle.setPosition(startX + i * CIRCLE_SPACING - CIRCLE_RADIUS, INDICATOR_Y_POSITION - CIRCLE_RADIUS);
         _colorCircles.push_back(circle);
     }
-    
-    // Initialiser l'indicateur de couleur actuelle
     _currentColorIndicator.setRadius(CIRCLE_RADIUS + 5.0f);
     _currentColorIndicator.setFillColor(sf::Color::Transparent);
     _currentColorIndicator.setOutlineThickness(3.0f);
     _currentColorIndicator.setOutlineColor(sf::Color::Yellow);
-    
-    // Positionner l'indicateur sur la première couleur
     float indicatorX = startX + _currentColorIndex * CIRCLE_SPACING - (_currentColorIndicator.getRadius());
     _currentColorIndicator.setPosition(indicatorX, INDICATOR_Y_POSITION - _currentColorIndicator.getRadius());
+
+    _colorOverlay.setSize(sf::Vector2f(_window->getWindow()->getSize().x, _window->getWindow()->getSize().y));
+    _colorOverlay.setPosition(0, 0);
+    _colorOverlay.setFillColor(sf::Color::Transparent);
 }
 
 void Game::createTestPlatforms()
@@ -152,7 +193,6 @@ void Game::createTestPlatforms()
     _platforms.push_back(std::make_unique<Platform>(50, 600, Color_t::BLACK, _colorState, _window->getWindow()));
     _platforms.push_back(std::make_unique<Platform>(114, 600, Color_t::BLACK, _colorState, _window->getWindow()));
     _platforms.push_back(std::make_unique<Platform>(178, 600, Color_t::BLACK, _colorState, _window->getWindow()));
-    // Plateformes de test colorées - plus hautes
     _platforms.push_back(std::make_unique<Platform>(400, 500, Color_t::RED, _colorState, _window->getWindow()));
     _platforms.push_back(std::make_unique<Platform>(600, 400, Color_t::GREEN, _colorState, _window->getWindow()));
     _platforms.push_back(std::make_unique<Platform>(800, 300, Color_t::BLUE, _colorState, _window->getWindow()));
@@ -167,30 +207,37 @@ void Game::updateGame(float deltaTime)
     if (_player) {
         _player->handleInput();
         _player->update(deltaTime);
-        _player->checkPlatformCollisions(_platforms);
+        _player->checkPlatformCollisions(_platforms, _enemyMode);
     }
+    updateCamera();
+    updateLivesDisplay();
 }
 
 void Game::renderGame()
 {
+    if (!_window || !_window->getWindow())
+        return;
     _window->clear(sf::Color(50, 50, 50));
-    // if (_map) {
-    //     _map->draw(_window->getWindow());
-    // }
+    _window->getWindow()->setView(_cameraView);
     for (const auto& platform : _platforms) {
         if (platform) {
-            platform->draw();
+            platform->draw(_enemyMode);
         }
     }
     if (_player) {
         _player->draw(*_window->getWindow());
     }
     if (_enemy) {
-        _enemy->draw();
+        _enemy->draw(_enemyMode);
     }
-    
-    // Dessiner les indicateurs de couleurs
+    _window->getWindow()->setView(_window->getWindow()->getDefaultView());
     renderColorIndicators();
+    renderColorOverlay();
+    _window->getWindow()->draw(_modeIcon);
+    if (_font.getInfo().family != "") {
+        _window->getWindow()->draw(_modeText);
+        _window->getWindow()->draw(_livesText);
+    }
 
     _window->display();
 }
@@ -204,9 +251,11 @@ void Game::cycleColor(int direction)
         _currentColorIndex = 0;
     }
     _colorState->setColor(_availableColors[_currentColorIndex]);
-    
-    // Mettre à jour la position de l'indicateur
+    sf::Color overlayColor = getColorFromEnum(_availableColors[_currentColorIndex]);
+    overlayColor.a = 30;
+    _colorOverlay.setFillColor(overlayColor);
     updateColorCirclesPositions();
+    checkPlayerPlatformValidity();
 }
 
 sf::Color Game::getColorFromEnum(Color_t colorEnum)
@@ -226,28 +275,105 @@ sf::Color Game::getColorFromEnum(Color_t colorEnum)
 
 void Game::renderColorIndicators()
 {
-    // Dessiner tous les cercles de couleurs
+    if (!_window || !_window->getWindow())
+        return;
     for (const auto& circle : _colorCircles) {
         _window->getWindow()->draw(circle);
     }
-    
-    // Dessiner l'indicateur de couleur actuelle
     _window->getWindow()->draw(_currentColorIndicator);
 }
 
 void Game::updateColorCirclesPositions()
 {
+    if (!_window || !_window->getWindow())
+        return;
     float windowWidth = _window->getWindow()->getSize().x;
     float totalWidth = (_availableColors.size() - 1) * CIRCLE_SPACING;
     float startX = (windowWidth - totalWidth) / 2.0f;
-    
-    // Mettre à jour les positions des cercles de couleurs
+    _colorOverlay.setSize(sf::Vector2f(windowWidth, _window->getWindow()->getSize().y));
     for (size_t i = 0; i < _colorCircles.size(); ++i) {
         _colorCircles[i].setPosition(startX + i * CIRCLE_SPACING - CIRCLE_RADIUS, INDICATOR_Y_POSITION - CIRCLE_RADIUS);
     }
-    
-    // Mettre à jour la position de l'indicateur de couleur actuelle
     float indicatorX = startX + _currentColorIndex * CIRCLE_SPACING - (_currentColorIndicator.getRadius());
     _currentColorIndicator.setPosition(indicatorX, INDICATOR_Y_POSITION - _currentColorIndicator.getRadius());
+}
+
+void Game::renderColorOverlay()
+{
+    if (!_window || !_window->getWindow())
+        return;
+    _window->getWindow()->draw(_colorOverlay);
+}
+
+void Game::checkPlayerPlatformValidity()
+{
+    if (!_player)
+        return;
+    sf::FloatRect playerBounds = _player->getBounds();
+    bool isOnValidPlatform = false;
+    for (const auto& platform : _platforms) {
+        if (!platform)
+            continue;
+        sf::FloatRect platformBounds = platform->getBounds();
+        if (playerBounds.left < platformBounds.left + platformBounds.width &&
+            playerBounds.left + playerBounds.width > platformBounds.left &&
+            playerBounds.top + playerBounds.height >= platformBounds.top &&
+            playerBounds.top + playerBounds.height <= platformBounds.top + 10.0f) {
+            if (platform->shouldCollideWithPlayer(_enemyMode)) {
+                isOnValidPlatform = true;
+                break;
+            }
+        }
+    }
+    if (!isOnValidPlatform && _player->isOnGround()) {
+        _player->setGroundState(false);
+    }
+}
+
+void Game::updateCamera()
+{
+    if (!_player || !_window || !_window->getWindow())
+        return;
+    sf::Vector2f playerPos = _player->getPosition();
+    sf::Vector2f currentCenter = _cameraView.getCenter();
+    float lerp = 0.1f;
+    sf::Vector2f targetCenter = playerPos + sf::Vector2f(PLAYER_SIZE / 2, PLAYER_SIZE / 2);
+    sf::Vector2f newCenter;
+    newCenter.x = currentCenter.x + (targetCenter.x - currentCenter.x) * lerp;
+    newCenter.y = currentCenter.y + (targetCenter.y - currentCenter.y) * lerp;
+    float cameraHalfWidth = _cameraView.getSize().x / 2.0f;
+    float cameraHalfHeight = _cameraView.getSize().y / 2.0f;
+    if (newCenter.x - cameraHalfWidth < 0) {
+        newCenter.x = cameraHalfWidth;
+    }
+    if (newCenter.y - cameraHalfHeight < 0) {
+        newCenter.y = cameraHalfHeight;
+    }
+    _cameraView.setCenter(newCenter);
+    _window->getWindow()->setView(_cameraView);
+}
+
+void Game::updateLivesDisplay()
+{
+    if (!_player || !_window || !_window->getWindow())
+        return;
+    std::string livesStr = "Vies: " + std::to_string(_player->getLife());
+    _livesText.setString(livesStr);
+    float windowWidth = _window->getWindow()->getSize().x;
+    if (_font.getInfo().family != "") {
+        sf::FloatRect textBounds = _livesText.getLocalBounds();
+        _livesText.setPosition(windowWidth - textBounds.width - 20, 10);
+    } else {
+        _livesText.setPosition(windowWidth - 150, 10);
+    }
+}
+
+Game::~Game()
+{
+    _platforms.clear();
+    _player.reset();
+    _enemy.reset();
+    _map.reset();
+    _window.reset();
 }
 
