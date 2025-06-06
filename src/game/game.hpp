@@ -17,6 +17,7 @@
 #include "enemy/Enemy.hpp"
 #include "platform/Platform.hpp"
 #include "Color/Color.hpp"
+#include "coins/Coins.hpp"
 
 #define CIRCLE_RADIUS 20.0f
 #define CIRCLE_SPACING 50.0f
@@ -59,8 +60,9 @@ private:
 private:
     std::unique_ptr<Window> _window;
     std::unique_ptr<Map> _map;
-    std::unique_ptr<Player> _player;
+    std::shared_ptr<Player> _player;
     std::vector<std::unique_ptr<Enemy>> _enemies;
+    std::vector<std::unique_ptr<Coins>> _coins;
     std::shared_ptr<Color> _colorState;
     std::vector<std::unique_ptr<Platform>> _platforms;
     std::vector<Color_t> _availableColors;

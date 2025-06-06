@@ -38,7 +38,7 @@ Game::Game() :
     _backgroundMusic.openFromFile("assets/sounds/Hajar.ogg");
     _backgroundMusic.setLoop(true);
     _backgroundMusic.setVolume(50);
-        
+
     // Initialize Game Over text
     _gameOverText.setCharacterSize(48);
     _gameOverText.setFillColor(sf::Color::Red);
@@ -46,13 +46,13 @@ Game::Game() :
     if (_font.getInfo().family != "") {
         _gameOverText.setFont(_font);
     }
-    
+
     _finalScoreText.setCharacterSize(32);
     _finalScoreText.setFillColor(sf::Color::White);
     if (_font.getInfo().family != "") {
         _finalScoreText.setFont(_font);
     }
-    
+
     _scoreText.setCharacterSize(24);
     _scoreText.setFillColor(sf::Color::White);
     if (_font.getInfo().family != "") {
@@ -176,7 +176,7 @@ void Game::initGameEntities()
     _currentColorIndex = 0;
     _colorState = std::make_shared<Color>(_availableColors[_currentColorIndex]);
     createTestPlatforms();
-    _player = std::make_unique<Player>(100.0f, 550.0f);
+    _player = std::make_shared<Player>(100.0f, 550.0f);
     _player->setColor(_colorState);
     // Les ennemis seront créés par createEnemiesFromMap() après le chargement de la carte
     _colorText.setCharacterSize(24);
@@ -271,6 +271,11 @@ void Game::renderGame()
     for (const auto& platform : _platforms) {
         if (platform) {
             platform->draw(_enemyMode);
+        }
+    }
+    for (const auto& coin : _coins) {
+        if (coin) {
+            coin->draw();
         }
     }
     if (_player) {
