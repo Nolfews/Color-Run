@@ -25,7 +25,7 @@
 class Game {
 public:
     Game();
-    ~Game() = default;
+    ~Game();
 
     void run();
     void loadLevel(int levelNumber);
@@ -46,6 +46,9 @@ private:
     void updateColorCirclesPositions();
     void checkPlayerPlatformValidity();
     sf::Color getColorFromEnum(Color_t colorEnum);
+    void renderColorOverlay();
+    void updateCamera();
+    void updateLivesDisplay();
 
 private:
     std::unique_ptr<Window> _window;
@@ -59,13 +62,19 @@ private:
     sf::Font _font;
     sf::Text _colorText;
     sf::Text _modeText;
+    sf::Text _livesText;
+    sf::Texture _colorModeTexture;
+    sf::Texture _enemyModeTexture;
+    sf::Sprite _modeIcon;
     sf::Clock _gameClock;
     int _currentLevel;
     int _maxLevel;
     std::string _levelBasePath;
     std::vector<sf::CircleShape> _colorCircles;
     sf::CircleShape _currentColorIndicator;
-    
+    sf::RectangleShape _colorOverlay;
+    sf::View _cameraView;
+
     bool _enemyMode;
 };
 
