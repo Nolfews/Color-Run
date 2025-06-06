@@ -30,7 +30,7 @@ class Player {
         // Constructeurs et destructeur
         Player(float startX = 100.0f, float startY = 900.0f);
         ~Player();
-        
+
         // Getters et setters
         std::shared_ptr<Color> getColor() const;
         void setColor(std::shared_ptr<Color> newColor);
@@ -47,7 +47,7 @@ class Player {
         void update(float deltaTime);
         void draw(sf::RenderWindow &window);
         void checkPlatformCollisions(const std::vector<std::unique_ptr<Platform>>& platforms);
-        
+
         // Actions du joueur
         void jump();
         void takeDamage(int damage = 1);
@@ -60,18 +60,19 @@ class Player {
         sf::Vector2f _position;
         sf::Vector2f _velocity;
         sf::Vector2f _maxVelocity;
-        
+
         // État du joueur
         bool _isOnGround;
         bool _spacePressed;
         int _life;
         int _score;
         std::shared_ptr<Color> _color;
-        
+
         // Rendu
         sf::RectangleShape _shape;
         sf::Texture _texture;
-        
+        sf::Clock _clock;
+
         // Méthodes privées
         void applyGravity(float deltaTime);
         void applyFriction(float deltaTime);
@@ -80,4 +81,6 @@ class Player {
         void checkGroundCollision();
         void updateVisuals();
         void handlePlatformCollision(Platform* platform, const sf::FloatRect& platformBounds);
+        void handleMovement();
+        void handleAerialMovement();
 };
