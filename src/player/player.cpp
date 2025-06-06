@@ -19,6 +19,7 @@ Player::Player(float startX, float startY)
     , _life(3)
     , _score(0)
     , _color(std::make_shared<Color>())
+    , _map(nullptr)
 {
     _texture.loadFromFile("assets/stand.png");
     _shape.setSize(sf::Vector2f(PLAYER_SIZE, PLAYER_SIZE));
@@ -164,12 +165,12 @@ void Player::teleport(float x, float y)
 {
     _position.x = x;
     _position.y = y;
+    _velocity = sf::Vector2f(0.0f, 0.0f);
     updateVisuals();
 }
 
 void Player::reset()
 {
-    _position = sf::Vector2f(100.0f, 900.0f);
     _velocity = sf::Vector2f(0.0f, 0.0f);
     _life = 3;
     _score = 0;
@@ -204,22 +205,67 @@ void Player::updatePosition(float deltaTime)
 
 void Player::checkBounds()
 {
-    if (_position.x < 0) {
-        _position.x = 0;
-        _velocity.x = 0;
-    } else if (_position.x > SCREEN_WIDTH - PLAYER_SIZE) {
-        _position.x = SCREEN_WIDTH - PLAYER_SIZE;
-        _velocity.x = 0;
+    static float minX = 0;
+    static float maxX = SCREEN_WIDTH;
+    static float minY = 0;
+    static float maxY = SCREEN_HEIGHT;
+
+    static const float fallingLimit = 1000.0f;
+    static const float horizontalLimit = 200.0f;
+
+    if (_map) {
+        maxX = _map->getWidth();
+        maxY = _map->getHeight();
+    }
+
+    bool outOfBounds = false;
+
+    if (_position.y > maxY + fallingLimit) {
+        outOfBounds = true;
+    }
+
+    if (_position.x < minX - horizontalLimit || _position.x > maxX + horizontalLimit) {
+        outOfBounds = true;
+    }
+
+    if (outOfBounds && _map) {
+        takeDamage(1);
+        sf::Vector2f spawnPos = _map->getSpawnPosition();
+        teleport(spawnPos.x, spawnPos.y);
+        std::cout << "Player out of bounds! Lives: " << _life << std::endl;
+
+        if (_life <= 0) {
+            std::cout << "Game Over!" << std::endl;
+        }
+    } else {
+
+        if (_position.x < minX) {
+            _position.x = minX;
+            _velocity.x = 0;
+        } else if (_position.x > maxX - PLAYER_SIZE) {
+            _position.x = maxX - PLAYER_SIZE;
+            _velocity.x = 0;
+        }
     }
 }
 
 void Player::checkGroundCollision()
 {
-    if (_position.y >= GROUND_Y) {
-        _position.y = GROUND_Y;
+    float groundY;
+
+    if (_map) {
+        unsigned int mapHeight = _map->getHeight();
+        groundY = mapHeight - PLAYER_SIZE;
+    } else {
+        groundY = GROUND_Y;
+    }
+
+
+    if (_position.y >= groundY) {
+        _position.y = groundY;
         _velocity.y = 0;
         _isOnGround = true;
-    } else if (_position.y < GROUND_Y && _velocity.y > 0) {
+    } else if (_position.y < groundY && _velocity.y > 0) {
         _isOnGround = false;
     }
 }
@@ -288,27 +334,37 @@ void Player::checkPlatformCollisions(const std::vector<std::unique_ptr<Platform>
 
 void Player::checkPlatformCollisions(const std::vector<std::unique_ptr<Platform>>& platforms, bool enemyMode)
 {
-    sf::FloatRect playerBounds = getBounds();
+    try {
+        sf::FloatRect playerBounds = getBounds();
 
-    float searchRadius = PLAYER_SIZE * 2.0f;
-    sf::FloatRect searchArea(
-        _position.x - searchRadius,
-        _position.y - searchRadius,
-        PLAYER_SIZE + 2 * searchRadius,
-        PLAYER_SIZE + 2 * searchRadius
-    );
-    for (const auto& platform : platforms) {
-        if (!platform) continue;
-        sf::FloatRect platformBounds = platform->getBounds();
-        if (!searchArea.intersects(platformBounds)) {
-            continue;
+        float searchRadius = PLAYER_SIZE * 2.0f;
+        sf::FloatRect searchArea(
+            _position.x - searchRadius,
+            _position.y - searchRadius,
+            PLAYER_SIZE + 2 * searchRadius,
+            PLAYER_SIZE + 2 * searchRadius
+        );
+
+        for (const auto& platform : platforms) {
+            if (!platform) continue;
+
+            try {
+                sf::FloatRect platformBounds = platform->getBounds();
+                if (!searchArea.intersects(platformBounds)) {
+                    continue;
+                }
+                if (!platform->shouldCollideWithPlayer(enemyMode)) {
+                    continue;
+                }
+                if (playerBounds.intersects(platformBounds)) {
+                    handlePlatformCollision(platform.get(), platformBounds);
+                }
+            } catch (const std::exception& e) {
+                continue;
+            }
         }
-        if (!platform->shouldCollideWithPlayer(enemyMode)) {
-            continue;
-        }
-        if (playerBounds.intersects(platformBounds)) {
-            handlePlatformCollision(platform.get(), platformBounds);
-        }
+    } catch (const std::exception& e) {
+        std::cerr << "Exception in checkPlatformCollisions: " << e.what() << std::endl;
     }
 }
 
@@ -371,4 +427,9 @@ void Player::handleAerialMovement()
     } else if (_velocity.y >= 300.0f) {
         _texture.loadFromFile("assets/jump.png", sf::IntRect(256, 0, 64, 64));
     }
+}
+
+void Player::setMapReference(std::shared_ptr<Map> map)
+{
+    _map = map;
 }

@@ -10,14 +10,17 @@
 Map::Map(const std::string &levelPath, unsigned int tileSize) : _tileSize(tileSize)
 {
     initializeTileColors();
-    loadFromFile(levelPath);
+
+    if (!loadFromFile(levelPath)) {
+        std::cerr << "Error loading level file: " << levelPath << std::endl;
+    }
 }
 
 bool Map::loadFromFile(const std::string &levelPath)
 {
     std::ifstream file(levelPath);
     if (!file.is_open()) {
-        std::cerr << "Error: Cannot open file " << levelPath << std::endl;
+        std::cerr << "Cannot open file " << levelPath << std::endl;
         return false;
     }
 
@@ -47,7 +50,7 @@ bool Map::loadFromFile(const std::string &levelPath)
             tile.shape.setPosition(x * _tileSize, y * _tileSize);
             tile.shape.setFillColor(getTileColor(tile.type));
 
-            if (tile.type != EMPTY) {
+            if (tile.type != EMPTY && tile.type != INVISIBLE_BOUNDARY) {
                 tile.shape.setOutlineThickness(1.0f);
                 tile.shape.setOutlineColor(sf::Color(30, 30, 30));
             }
@@ -66,12 +69,25 @@ bool Map::loadFromFile(const std::string &levelPath)
     return true;
 }
 
-void Map::draw(std::shared_ptr<sf::RenderWindow> window)
+void Map::draw(std::shared_ptr<sf::RenderWindow> window, std::shared_ptr<Color> colorState, bool enemyMode)
 {
     for (const auto &row : _tiles) {
         for (const auto &tile : row) {
-            if (tile.type != EMPTY) {
-                window->draw(tile.shape);
+            bool shouldDraw = false;
+
+            if (tile.type != EMPTY && tile.type != INVISIBLE_BOUNDARY) {
+                if (tile.type == SPAWN || tile.type == FINISH || tile.type == TRAP) {
+                    shouldDraw = true;
+                } else if (enemyMode) {
+                    shouldDraw = (tile.color == BLACK || tile.color == WHITE);
+                } else if (colorState) {
+                    shouldDraw = (tile.color == colorState->getColor() || tile.color == BLACK || tile.color == WHITE);
+                } else {
+                    shouldDraw = true;
+                }
+                if (shouldDraw) {
+                    window->draw(tile.shape);
+                }
             }
         }
     }
@@ -101,6 +117,7 @@ void Map::initializeTileColors()
     _tileColors[MAGENTA_TILE]= sf::Color(255, 0, 255);   // Magenta
     _tileColors[WHITE_TILE]  = sf::Color(255, 255, 255); // White
     _tileColors[BLACK_TILE]  = sf::Color(0, 0, 0);       // Black
+    _tileColors[INVISIBLE_BOUNDARY] = sf::Color::Transparent; // Invisible comme EMPTY
 }
 
 TileType Map::charToTileType(char c)
@@ -118,6 +135,7 @@ TileType Map::charToTileType(char c)
         case '6': return MAGENTA_TILE; // MAGENTA
         case '7': return WHITE_TILE;   // WHITE
         case '8': return BLACK_TILE;   // BLACK
+        case '#': return INVISIBLE_BOUNDARY; // Limite invisible
         default:  return EMPTY;
     }
 }
@@ -150,4 +168,28 @@ Color_t Map::getTileColorEnum(int x, int y) const
         }
     }
     return WHITE;
+}
+
+unsigned int Map::getWidth() const
+{
+    if (_tiles.empty()) {
+        return 0;
+    }
+    unsigned int maxWidth = 0;
+    for (const auto& row : _tiles) {
+        if (row.size() > maxWidth) {
+            maxWidth = row.size();
+        }
+    }
+    return maxWidth * _tileSize;
+}
+
+unsigned int Map::getHeight() const
+{
+    return _tiles.size() * _tileSize;
+}
+
+unsigned int Map::getTileSize() const
+{
+    return _tileSize;
 }

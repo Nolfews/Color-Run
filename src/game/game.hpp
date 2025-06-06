@@ -41,18 +41,21 @@ private:
     void renderGame();
     void initGameEntities();
     void createTestPlatforms();
+    void createPlatformsFromMap();
     void cycleColor(int direction);
     void renderColorIndicators();
     void updateColorCirclesPositions();
     void checkPlayerPlatformValidity();
     sf::Color getColorFromEnum(Color_t colorEnum);
+    void checkSpecialTileCollisions();
     void renderColorOverlay();
     void updateCamera();
     void updateLivesDisplay();
+    void updateLevelDisplay();
 
 private:
     std::unique_ptr<Window> _window;
-    std::unique_ptr<Map> _map;
+    std::shared_ptr<Map> _map;
     std::unique_ptr<Player> _player;
     std::unique_ptr<Enemy> _enemy;
     std::shared_ptr<Color> _colorState;
@@ -63,6 +66,7 @@ private:
     sf::Text _colorText;
     sf::Text _modeText;
     sf::Text _livesText;
+    sf::Text _levelText;
     sf::Texture _colorModeTexture;
     sf::Texture _enemyModeTexture;
     sf::Sprite _modeIcon;
@@ -74,6 +78,7 @@ private:
     sf::CircleShape _currentColorIndicator;
     sf::RectangleShape _colorOverlay;
     sf::View _cameraView;
+    bool _pendingLevelChange;
 
     bool _enemyMode;
 };

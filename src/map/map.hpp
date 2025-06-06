@@ -28,7 +28,8 @@ enum TileType {
     CYAN_TILE,  // '5' - CYAN
     MAGENTA_TILE,// '6' - MAGENTA
     WHITE_TILE, // '7' - WHITE
-    BLACK_TILE  // '8' - BLACK
+    BLACK_TILE, // '8' - BLACK
+    INVISIBLE_BOUNDARY // '#' - Invisible boundary that acts like a trap
 };
 
 struct Tile {
@@ -43,10 +44,14 @@ public:
     ~Map() = default;
 
     bool loadFromFile(const std::string &levelPath);
-    void draw(std::shared_ptr<sf::RenderWindow> window);
+    void draw(std::shared_ptr<sf::RenderWindow> window, std::shared_ptr<Color> colorState = nullptr, bool enemyMode = false);
     sf::Vector2f getSpawnPosition() const;
     std::vector<std::vector<Tile>> &getTiles();
     Color_t getTileColorEnum(int x, int y) const;
+
+    unsigned int getWidth() const;
+    unsigned int getHeight() const;
+    unsigned int getTileSize() const;
 
 private:
     void initializeTileColors();

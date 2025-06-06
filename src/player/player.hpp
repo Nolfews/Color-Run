@@ -8,6 +8,7 @@
 #pragma once
 
 #include "../Color/Color.hpp"
+#include "../map/map.hpp"
 #include <memory>
 #include <SFML/Graphics.hpp>
 #include <vector>
@@ -38,6 +39,7 @@ class Player {
         sf::Vector2f getPosition() const;
         sf::FloatRect getBounds() const;
         bool isOnGround() const;
+        void setMapReference(std::shared_ptr<Map> map);
 
         void handleInput();
         void update(float deltaTime);
@@ -63,6 +65,7 @@ class Player {
         sf::RectangleShape _shape;
         sf::Texture _texture;
         sf::Clock _clock;
+        std::shared_ptr<Map> _map;
         void applyGravity(float deltaTime);
         void applyFriction(float deltaTime);
         void updatePosition(float deltaTime);

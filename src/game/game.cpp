@@ -15,6 +15,7 @@ Game::Game() :
     _currentLevel(1),
     _maxLevel(0),
     _levelBasePath("assets/levels/level_"),
+    _pendingLevelChange(false),
     _enemyMode(false)
 {
     for (const auto& entry : std::filesystem::directory_iterator("assets/levels/")) {
@@ -26,6 +27,7 @@ Game::Game() :
                 int levelNum = std::stoi(levelStr);
                 _maxLevel = std::max(_maxLevel, levelNum);
             } catch (const std::exception& e) {
+                std::cerr << "Error parsing level number from " << path << ": " << e.what() << std::endl;
             }
         }
     }
@@ -41,33 +43,89 @@ void Game::run()
     while (_window->isOpen()) {
         float deltaTime = _gameClock.restart().asSeconds();
 
-        _window->handleEvents();
-
-        updateGame(deltaTime);
-
-        renderGame();
+        try {
+            _window->handleEvents();
+            updateGame(deltaTime);
+            renderGame();
+        } catch (const std::exception& e) {
+            std::cerr << "Exception: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "Unknown exception occurred" << std::endl;
+            break;
+        }
     }
 }
 
 void Game::loadLevel(int levelNumber)
 {
+    if (levelNumber < 1 || levelNumber > _maxLevel) {
+        std::cerr << "Invalid level number: " << levelNumber << ". Valid range is 1-" << _maxLevel << std::endl;
+        return;
+    }
+
     std::string levelPath = _levelBasePath + std::to_string(levelNumber) + ".txt";
 
     try {
-        _map = std::make_unique<Map>(levelPath);
+        if (!std::filesystem::exists(levelPath)) {
+            throw std::runtime_error("Level file not found: " + levelPath);
+        }
+
+        int previousLevel = _currentLevel;
+
+        _platforms.clear();
+
+        _map = std::make_shared<Map>(levelPath);
+
         _currentLevel = levelNumber;
+
+        createPlatformsFromMap();
+
+        if (_player) {
+            _player->setMapReference(_map);
+
+            sf::Vector2f spawnPos = _map->getSpawnPosition();
+
+            _player->reset();
+            _player->teleport(spawnPos.x, spawnPos.y);
+        }
+
+        updateLevelDisplay();
+
     } catch (const std::exception& e) {
         std::cerr << "Error loading level " << levelNumber << ": " << e.what() << std::endl;
     }
 }
 
+
 bool Game::nextLevel()
 {
     if (_currentLevel < _maxLevel) {
-        loadLevel(_currentLevel + 1);
-        return true;
+        try {
+            int nextLevelNumber = _currentLevel + 1;
+
+            try {
+                loadLevel(nextLevelNumber);
+                return true;
+            } catch (const std::exception& e) {
+                std::cerr << "Failed to load next level: " << e.what() << std::endl;
+                return false;
+            }
+        } catch (...) {
+            std::cerr << "Unknown exception in nextLevel()" << std::endl;
+            return false;
+        }
+    } else {
+        std::cout << "You've completed all available levels!" << std::endl;
+        std::cout << "Congratulations! Game complete! Restarting at level 1." << std::endl;
+
+        try {
+            loadLevel(1);
+            return true;
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to restart at level 1: " << e.what() << std::endl;
+            return false;
+        }
     }
-    std::cout << "You've completed all available levels!" << std::endl;
     return false;
 }
 
@@ -132,9 +190,13 @@ void Game::initGameEntities()
     _availableColors = {Color_t::RED, Color_t::GREEN, Color_t::BLUE, Color_t::YELLOW, Color_t::CYAN, Color_t::MAGENTA};
     _currentColorIndex = 0;
     _colorState = std::make_shared<Color>(_availableColors[_currentColorIndex]);
-    createTestPlatforms();
     _player = std::make_unique<Player>(100.0f, 550.0f);
     _player->setColor(_colorState);
+
+    if (_map) {
+        _player->setMapReference(_map);
+    }
+
     _enemy = std::make_unique<Enemy>(100, 100, _colorState, _window->getWindow());
     _colorText.setCharacterSize(24);
     _colorText.setFillColor(sf::Color::White);
@@ -163,6 +225,12 @@ void Game::initGameEntities()
     if (_font.getInfo().family != "") {
         _livesText.setFont(_font);
     }
+
+    _levelText.setCharacterSize(24);
+    _levelText.setFillColor(sf::Color::White);
+    if (_font.getInfo().family != "")
+        _levelText.setFont(_font);
+    _levelText.setPosition(10, 80);
     _colorCircles.clear();
     float windowWidth = _window->getWindow()->getSize().x;
     float totalWidth = (_availableColors.size() - 1) * CIRCLE_SPACING;
@@ -202,15 +270,61 @@ void Game::createTestPlatforms()
     _platforms.push_back(std::make_unique<Platform>(700, 150, Color_t::MAGENTA, _colorState, _window->getWindow()));
 }
 
+void Game::createPlatformsFromMap()
+{
+    try {
+        if (!_map || !_window || !_window->getWindow()) {
+            return;
+        }
+
+        _platforms.clear();
+
+        auto& tiles = _map->getTiles();
+
+        if (tiles.empty()) {
+            return;
+        }
+
+        for (size_t y = 0; y < tiles.size(); y++) {
+            for (size_t x = 0; x < tiles[y].size(); x++) {
+                try {
+                    const Tile& tile = tiles[y][x];
+
+                    if (tile.type == EMPTY || tile.type == SPAWN || tile.type == FINISH || tile.type == TRAP || tile.type == INVISIBLE_BOUNDARY)
+                        continue;
+
+                    float posX = x * 64.0f;
+                    float posY = y * 64.0f;
+
+                    auto platform = std::make_unique<Platform>(posX, posY, tile.color, _colorState, _window->getWindow());
+                    _platforms.push_back(std::move(platform));
+                } catch (const std::exception& e) {
+                    std::cerr << "Error processing tile: " << e.what() << std::endl;
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error in createPlatformsFromMap: " << e.what() << std::endl;
+    }
+}
+
 void Game::updateGame(float deltaTime)
 {
+    if (_pendingLevelChange) {
+        _pendingLevelChange = false;
+        nextLevel();
+        return;
+    }
+
     if (_player) {
         _player->handleInput();
         _player->update(deltaTime);
         _player->checkPlatformCollisions(_platforms, _enemyMode);
+        checkSpecialTileCollisions();
     }
     updateCamera();
     updateLivesDisplay();
+    updateLevelDisplay();
 }
 
 void Game::renderGame()
@@ -219,11 +333,16 @@ void Game::renderGame()
         return;
     _window->clear(sf::Color(50, 50, 50));
     _window->getWindow()->setView(_cameraView);
+
+    if (_map)
+        _map->draw(_window->getWindow(), _colorState, _enemyMode);
+
     for (const auto& platform : _platforms) {
         if (platform) {
             platform->draw(_enemyMode);
         }
     }
+
     if (_player) {
         _player->draw(*_window->getWindow());
     }
@@ -237,6 +356,7 @@ void Game::renderGame()
     if (_font.getInfo().family != "") {
         _window->getWindow()->draw(_modeText);
         _window->getWindow()->draw(_livesText);
+        _window->getWindow()->draw(_levelText);
     }
 
     _window->display();
@@ -334,6 +454,7 @@ void Game::updateCamera()
 {
     if (!_player || !_window || !_window->getWindow())
         return;
+
     sf::Vector2f playerPos = _player->getPosition();
     sf::Vector2f currentCenter = _cameraView.getCenter();
     float lerp = 0.1f;
@@ -341,14 +462,30 @@ void Game::updateCamera()
     sf::Vector2f newCenter;
     newCenter.x = currentCenter.x + (targetCenter.x - currentCenter.x) * lerp;
     newCenter.y = currentCenter.y + (targetCenter.y - currentCenter.y) * lerp;
+
     float cameraHalfWidth = _cameraView.getSize().x / 2.0f;
     float cameraHalfHeight = _cameraView.getSize().y / 2.0f;
+
+    float maxX = SCREEN_WIDTH;
+    float maxY = SCREEN_HEIGHT;
+
+    if (_map) {
+        maxX = _map->getWidth();
+        maxY = _map->getHeight();
+    }
+
     if (newCenter.x - cameraHalfWidth < 0) {
         newCenter.x = cameraHalfWidth;
+    } else if (newCenter.x + cameraHalfWidth > maxX) {
+        newCenter.x = maxX - cameraHalfWidth;
     }
+
     if (newCenter.y - cameraHalfHeight < 0) {
         newCenter.y = cameraHalfHeight;
+    } else if (newCenter.y + cameraHalfHeight > maxY) {
+        newCenter.y = maxY - cameraHalfHeight;
     }
+
     _cameraView.setCenter(newCenter);
     _window->getWindow()->setView(_cameraView);
 }
@@ -368,12 +505,76 @@ void Game::updateLivesDisplay()
     }
 }
 
+void Game::updateLevelDisplay()
+{
+    sf::Vector2u Window = _window->getWindow()->getSize();
+    std::string levelStr = "Niveau: " + std::to_string(_currentLevel);
+    _levelText.setString(levelStr);
+    _levelText.setPosition(Window.x / 2 - 60, Window.y - (Window.y - 75));
+}
+
+void Game::checkSpecialTileCollisions()
+{
+    static bool isProcessingCollisions = false;
+    if (isProcessingCollisions) {
+        return;
+    }
+
+    if (!_player || !_map) {
+        return;
+    }
+
+    isProcessingCollisions = true;
+
+    try {
+        sf::FloatRect playerBounds = _player->getBounds();
+        auto& tiles = _map->getTiles();
+
+        for (size_t y = 0; y < tiles.size(); y++) {
+            for (size_t x = 0; x < tiles[y].size(); x++) {
+                const Tile& tile = tiles[y][x];
+
+                if (tile.type != TRAP && tile.type != FINISH && tile.type != INVISIBLE_BOUNDARY) {
+                    continue;
+                }
+
+                sf::FloatRect tileBounds = tile.shape.getGlobalBounds();
+
+                if (playerBounds.intersects(tileBounds)) {
+                    if (tile.type == TRAP || tile.type == INVISIBLE_BOUNDARY) {
+                        _player->takeDamage(1);
+
+                        sf::Vector2f spawnPos = _map->getSpawnPosition();
+                        _player->teleport(spawnPos.x, spawnPos.y);
+
+                        if (tile.type == TRAP) {
+                            std::cout << "Player hit a trap! Lives: " << _player->getLife() << std::endl;
+                        } else {
+                            std::cout << "Player hit an invisible boundary! Lives: " << _player->getLife() << std::endl;
+                        }
+
+                        if (_player->getLife() <= 0) {
+                            std::cout << "Game Over!" << std::endl;
+                        }
+                    } else if (tile.type == FINISH) {
+                        std::cout << "Level " << _currentLevel << " completed!" << std::endl;
+                        _pendingLevelChange = true;
+                    }
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error in checkSpecialTileCollisions: " << e.what() << std::endl;
+    }
+
+    isProcessingCollisions = false;
+}
+
 Game::~Game()
 {
     _platforms.clear();
     _player.reset();
     _enemy.reset();
-    _map.reset();
     _window.reset();
 }
 
