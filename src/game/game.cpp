@@ -15,7 +15,8 @@ Game::Game() :
     _currentLevel(1),
     _maxLevel(0),
     _levelBasePath("assets/levels/level_"),
-    _enemyMode(false)
+    _enemyMode(false),
+    _gameOver(false)
 {
     for (const auto& entry : std::filesystem::directory_iterator("assets/levels/")) {
         const std::string& path = entry.path().string();
@@ -34,6 +35,26 @@ Game::Game() :
     _cameraView.setCenter(640, 360);
     setupEventHandlers();
     loadLevel(_currentLevel);
+    
+    // Initialize Game Over text
+    _gameOverText.setCharacterSize(48);
+    _gameOverText.setFillColor(sf::Color::Red);
+    _gameOverText.setString("GAME OVER");
+    if (_font.getInfo().family != "") {
+        _gameOverText.setFont(_font);
+    }
+    
+    _finalScoreText.setCharacterSize(32);
+    _finalScoreText.setFillColor(sf::Color::White);
+    if (_font.getInfo().family != "") {
+        _finalScoreText.setFont(_font);
+    }
+    
+    _scoreText.setCharacterSize(24);
+    _scoreText.setFillColor(sf::Color::White);
+    if (_font.getInfo().family != "") {
+        _scoreText.setFont(_font);
+    }
 }
 
 void Game::run()
@@ -56,6 +77,11 @@ void Game::loadLevel(int levelNumber)
     try {
         _map = std::make_unique<Map>(levelPath);
         _currentLevel = levelNumber;
+        createEnemiesFromMap();
+        if (_player && _map) {
+            sf::Vector2f spawnPos = _map->getSpawnPosition();
+            _player->teleport(spawnPos.x, spawnPos.y);
+        }
     } catch (const std::exception& e) {
         std::cerr << "Error loading level " << levelNumber << ": " << e.what() << std::endl;
     }
@@ -94,6 +120,19 @@ void Game::setupEventHandlers()
 
 void Game::handleKeyPressed(sf::Keyboard::Key key)
 {
+    if (_gameOver) {
+        if (key == sf::Keyboard::R) {
+            // Restart the game
+            _gameOver = false;
+            if (_player) {
+                _player->setLife(3);
+                _player->setScore(0);
+                resetPlayerToSpawn();
+            }
+        }
+        return;
+    }
+    
     if (key == sf::Keyboard::Left) {
         cycleColor(-1);
     } else if (key == sf::Keyboard::Right) {
@@ -135,7 +174,7 @@ void Game::initGameEntities()
     createTestPlatforms();
     _player = std::make_unique<Player>(100.0f, 550.0f);
     _player->setColor(_colorState);
-    _enemy = std::make_unique<Enemy>(100, 100, _colorState, _window->getWindow());
+    // Les ennemis seront créés par createEnemiesFromMap() après le chargement de la carte
     _colorText.setCharacterSize(24);
     _colorText.setFillColor(sf::Color::White);
     _colorText.setPosition(10, 10);
@@ -204,10 +243,16 @@ void Game::createTestPlatforms()
 
 void Game::updateGame(float deltaTime)
 {
+    if (_gameOver) {
+        return; // Don't update game if it's over
+    }
+    
     if (_player) {
         _player->handleInput();
         _player->update(deltaTime);
         _player->checkPlatformCollisions(_platforms, _enemyMode);
+        checkPlayerEnemyCollision();
+        checkPlayerSpecialTileCollisions();
     }
     updateCamera();
     updateLivesDisplay();
@@ -227,8 +272,10 @@ void Game::renderGame()
     if (_player) {
         _player->draw(*_window->getWindow());
     }
-    if (_enemy) {
-        _enemy->draw(_enemyMode);
+    for (const auto& enemy : _enemies) {
+        if (enemy) {
+            enemy->draw(_enemyMode);
+        }
     }
     _window->getWindow()->setView(_window->getWindow()->getDefaultView());
     renderColorIndicators();
@@ -237,6 +284,11 @@ void Game::renderGame()
     if (_font.getInfo().family != "") {
         _window->getWindow()->draw(_modeText);
         _window->getWindow()->draw(_livesText);
+        _window->getWindow()->draw(_scoreText);
+    }
+
+    if (_gameOver) {
+        renderGameOver();
     }
 
     _window->display();
@@ -357,6 +409,8 @@ void Game::updateLivesDisplay()
 {
     if (!_player || !_window || !_window->getWindow())
         return;
+        
+    // Update lives display
     std::string livesStr = "Vies: " + std::to_string(_player->getLife());
     _livesText.setString(livesStr);
     float windowWidth = _window->getWindow()->getSize().x;
@@ -366,13 +420,183 @@ void Game::updateLivesDisplay()
     } else {
         _livesText.setPosition(windowWidth - 150, 10);
     }
+    
+    // Update score display
+    std::string scoreStr = "Score: " + std::to_string(_player->getScore());
+    _scoreText.setString(scoreStr);
+    if (_font.getInfo().family != "") {
+        sf::FloatRect scoreBounds = _scoreText.getLocalBounds();
+        _scoreText.setPosition(windowWidth - scoreBounds.width - 20, 40);
+    } else {
+        _scoreText.setPosition(windowWidth - 150, 40);
+    }
+}
+
+void Game::checkPlayerEnemyCollision()
+{
+    if (!_player) {
+        return;
+    }
+    
+    sf::FloatRect playerBounds = _player->getBounds();
+    
+    for (const auto& enemy : _enemies) {
+        if (!enemy) continue;
+        
+        sf::FloatRect enemyBounds = enemy->getBounds();
+        
+        // Check collision between player and enemy
+        if (playerBounds.intersects(enemyBounds)) {
+            handlePlayerDeath();
+            return; // Exit after first collision
+        }
+    }
+}
+
+void Game::resetPlayerToSpawn()
+{
+    if (!_player || !_map) {
+        return;
+    }
+    
+    sf::Vector2f spawnPos = _map->getSpawnPosition();
+    _player->teleport(spawnPos.x, spawnPos.y);
+}
+
+void Game::handlePlayerDeath()
+{
+    if (!_player) {
+        return;
+    }
+    
+    _player->takeDamage(1);
+    
+    if (_player->getLife() <= 0) {
+        _gameOver = true;
+    } else {
+        resetPlayerToSpawn();
+    }
+}
+
+void Game::renderGameOver()
+{
+    if (!_window || !_window->getWindow()) {
+        return;
+    }
+    
+    // Create semi-transparent overlay
+    sf::RectangleShape overlay;
+    overlay.setSize(sf::Vector2f(_window->getWindow()->getSize()));
+    overlay.setFillColor(sf::Color(0, 0, 0, 180));
+    _window->getWindow()->draw(overlay);
+    
+    // Position Game Over text
+    sf::Vector2u windowSize = _window->getWindow()->getSize();
+    sf::FloatRect gameOverBounds = _gameOverText.getLocalBounds();
+    _gameOverText.setPosition(
+        (windowSize.x - gameOverBounds.width) / 2.0f,
+        (windowSize.y - gameOverBounds.height) / 2.0f - 80.0f
+    );
+    _window->getWindow()->draw(_gameOverText);
+    
+    // Position and display final score
+    std::string scoreText = "Score Final: " + std::to_string(_player ? _player->getScore() : 0);
+    _finalScoreText.setString(scoreText);
+    sf::FloatRect scoreBounds = _finalScoreText.getLocalBounds();
+    _finalScoreText.setPosition(
+        (windowSize.x - scoreBounds.width) / 2.0f,
+        (windowSize.y - scoreBounds.height) / 2.0f - 20.0f
+    );
+    _window->getWindow()->draw(_finalScoreText);
+    
+    // Add restart instruction
+    sf::Text restartText;
+    restartText.setString("Appuyez sur R pour recommencer");
+    restartText.setCharacterSize(24);
+    restartText.setFillColor(sf::Color::Yellow);
+    if (_font.getInfo().family != "") {
+        restartText.setFont(_font);
+    }
+    sf::FloatRect restartBounds = restartText.getLocalBounds();
+    restartText.setPosition(
+        (windowSize.x - restartBounds.width) / 2.0f,
+        (windowSize.y - restartBounds.height) / 2.0f + 40.0f
+    );
+    _window->getWindow()->draw(restartText);
+}
+
+void Game::checkPlayerSpecialTileCollisions()
+{
+    if (!_player || !_map) {
+        return;
+    }
+    
+    sf::FloatRect playerBounds = _player->getBounds();
+    std::vector<std::vector<Tile>>& tiles = _map->getTiles();
+    
+    // Calculate which tiles the player is overlapping
+    int leftTile = static_cast<int>(playerBounds.left / 64);
+    int rightTile = static_cast<int>((playerBounds.left + playerBounds.width) / 64);
+    int topTile = static_cast<int>(playerBounds.top / 64);
+    int bottomTile = static_cast<int>((playerBounds.top + playerBounds.height) / 64);
+    
+    // Ensure bounds are within map limits
+    leftTile = std::max(0, leftTile);
+    topTile = std::max(0, topTile);
+    if (topTile < static_cast<int>(tiles.size())) {
+        rightTile = std::min(rightTile, static_cast<int>(tiles[topTile].size()) - 1);
+        bottomTile = std::min(bottomTile, static_cast<int>(tiles.size()) - 1);
+        
+        for (int y = topTile; y <= bottomTile; ++y) {
+            for (int x = leftTile; x <= rightTile; ++x) {
+                if (y >= 0 && y < static_cast<int>(tiles.size()) && 
+                    x >= 0 && x < static_cast<int>(tiles[y].size())) {
+                    
+                    TileType tileType = tiles[y][x].type;
+                    
+                    if (tileType == FINISH) {
+                        _player->addScore(100);
+                        std::cout << "Niveau terminé! +100 points" << std::endl;
+                        nextLevel();
+                    } else if (tileType == TRAP) {
+                        _player->addScore(50);
+                        std::cout << "Piège évité! +50 points" << std::endl;
+                        // Mark tile as collected so it doesn't give points again
+                        tiles[y][x].type = EMPTY;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Game::createEnemiesFromMap()
+{
+    if (!_map) {
+        return;
+    }
+    
+    // Clear existing enemies
+    _enemies.clear();
+    
+    // Get enemy positions from map
+    std::vector<sf::Vector2f> enemyPositions = _map->getEnemyPositions();
+    
+    // Create an enemy for each position
+    for (const sf::Vector2f& pos : enemyPositions) {
+        auto enemy = std::make_unique<Enemy>(static_cast<int>(pos.x), static_cast<int>(pos.y), 
+                                           _colorState, _window->getWindow());
+        _enemies.push_back(std::move(enemy));
+    }
+    
+    std::cout << "Created " << _enemies.size() << " enemies from map" << std::endl;
 }
 
 Game::~Game()
 {
     _platforms.clear();
+    _enemies.clear();
     _player.reset();
-    _enemy.reset();
     _map.reset();
     _window.reset();
 }

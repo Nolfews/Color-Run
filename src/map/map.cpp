@@ -55,6 +55,10 @@ bool Map::loadFromFile(const std::string &levelPath)
             if (tile.type == SPAWN) {
                 _spawnPosition = sf::Vector2f(x * _tileSize, y * _tileSize);
             }
+            
+            if (tile.type == ENEMY) {
+                _enemyPositions.push_back(sf::Vector2f(x * _tileSize, y * _tileSize));
+            }
 
             row.push_back(tile);
         }
@@ -82,6 +86,11 @@ sf::Vector2f Map::getSpawnPosition() const
     return _spawnPosition;
 }
 
+std::vector<sf::Vector2f> Map::getEnemyPositions() const
+{
+    return _enemyPositions;
+}
+
 std::vector<std::vector<Tile>> &Map::getTiles()
 {
     return _tiles;
@@ -92,7 +101,8 @@ void Map::initializeTileColors()
     _tileColors[EMPTY]       = sf::Color::Transparent;
     _tileColors[SPAWN]       = sf::Color(50, 205, 50);    // Lime Green
     _tileColors[FINISH]      = sf::Color(255, 215, 0);    // Gold
-    _tileColors[TRAP]        = sf::Color(139, 0, 0);      // Dark
+    _tileColors[TRAP]        = sf::Color(139, 0, 0);      // Dark Red
+    _tileColors[ENEMY]       = sf::Color(34, 241, 53);    // Green (like Enemy)
     _tileColors[RED_TILE]    = sf::Color(255, 0, 0);     // Red
     _tileColors[GREEN_TILE]  = sf::Color(0, 255, 0);     // Green
     _tileColors[BLUE_TILE]   = sf::Color(0, 0, 255);     // Blue
@@ -110,6 +120,7 @@ TileType Map::charToTileType(char c)
         case 'P': return SPAWN;
         case 'F': return FINISH;
         case 'Q': return TRAP;
+        case 'E': return ENEMY;
         case '1': return RED_TILE;     // RED
         case '2': return GREEN_TILE;   // GREEN
         case '3': return BLUE_TILE;    // BLUE

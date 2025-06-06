@@ -21,6 +21,7 @@ enum TileType {
     SPAWN,      // 'P'
     FINISH,     // 'F'
     TRAP,       // 'Q'
+    ENEMY,      // 'E'
     RED_TILE,   // '1' - RED
     GREEN_TILE, // '2' - GREEN
     BLUE_TILE,  // '3' - BLUE
@@ -45,6 +46,7 @@ public:
     bool loadFromFile(const std::string &levelPath);
     void draw(std::shared_ptr<sf::RenderWindow> window);
     sf::Vector2f getSpawnPosition() const;
+    std::vector<sf::Vector2f> getEnemyPositions() const;
     std::vector<std::vector<Tile>> &getTiles();
     Color_t getTileColorEnum(int x, int y) const;
 
@@ -57,5 +59,6 @@ private:
     std::vector<std::vector<Tile>> _tiles;
     std::map<TileType, sf::Color> _tileColors;
     sf::Vector2f _spawnPosition;
+    std::vector<sf::Vector2f> _enemyPositions;
     unsigned int _tileSize;
 };
