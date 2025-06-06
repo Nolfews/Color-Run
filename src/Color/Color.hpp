@@ -16,7 +16,8 @@ typedef enum Color_e{
     CYAN,
     MAGENTA,
     WHITE,
-    BLACK
+    BLACK,
+    TRANSPARENT
 } Color_t;
 
 class Color {

@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 #include <SFML/System/Clock.hpp>
+#include <SFML/Audio.hpp>
 #include "window/window.hpp"
 #include "map/map.hpp"
 #include "player/player.hpp"
@@ -79,15 +80,17 @@ private:
     void renderGame();
     void initGameEntities();
     void createTestPlatforms();
+    void createPlatformsFromMap();
     void cycleColor(int direction);
     void renderColorIndicators();
     void updateColorCirclesPositions();
     void checkPlayerPlatformValidity();
     sf::Color getColorFromEnum(Color_t colorEnum);
+    void checkSpecialTileCollisions();
     void renderColorOverlay();
     void updateCamera();
     void updateLivesDisplay();
-
+    void updateLevelDisplay();
     void handleMenuKeyPressed(sf::Keyboard::Key key);
     void renderMenu();
     void initMenu();
@@ -122,10 +125,11 @@ private:
     void renderGameOver();
     void checkPlayerSpecialTileCollisions();
     void createEnemiesFromMap();
+    void createCoinsFromMap();
 
 private:
     std::unique_ptr<Window> _window;
-    std::unique_ptr<Map> _map;
+    std::shared_ptr<Map> _map;
     std::shared_ptr<Player> _player;
     std::vector<std::unique_ptr<Enemy>> _enemies;
     std::vector<std::unique_ptr<Coins>> _coins;
@@ -137,6 +141,7 @@ private:
     sf::Text _colorText;
     sf::Text _modeText;
     sf::Text _livesText;
+    sf::Text _levelText;
     sf::Texture _colorModeTexture;
     sf::Texture _enemyModeTexture;
     sf::Sprite _modeIcon;
@@ -148,12 +153,14 @@ private:
     sf::CircleShape _currentColorIndicator;
     sf::RectangleShape _colorOverlay;
     sf::View _cameraView;
-    sf::Music _backgroundMusic;
+    bool _pendingLevelChange;
+
     bool _enemyMode;
     bool _gameOver;
     sf::Text _gameOverText;
     sf::Text _finalScoreText;
     sf::Text _scoreText;
+    sf::Music _backgroundMusic;
 
     GameState _gameState;
     MenuOption _currentMenuOption;
