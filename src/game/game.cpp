@@ -436,6 +436,7 @@ void Game::renderGame()
     if (_font.getInfo().family != "") {
         _window->getWindow()->draw(_modeText);
         _window->getWindow()->draw(_livesText);
+        _window->getWindow()->draw(_scoreText);
         _window->getWindow()->draw(_levelText);
     }
 
@@ -793,6 +794,7 @@ void Game::checkSpecialTileCollisions()
                         }
 
                         if (_player->getLife() <= 0) {
+                            _gameOver = true;
                             std::cout << "Game Over!" << std::endl;
                         }
                     } else if (tile.type == FINISH) {
