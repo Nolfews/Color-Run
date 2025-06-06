@@ -9,6 +9,7 @@
 #include "../platform/Platform.hpp"
 #include <iostream>
 #include <algorithm>
+#include <SFML/Audio.hpp>
 
 Player::Player(float startX, float startY)
     : _position(startX, startY)
@@ -20,9 +21,13 @@ Player::Player(float startX, float startY)
     , _score(0)
     , _color(std::make_shared<Color>())
 {
+    _texture.loadFromFile("assets/img/stand.png");
     _shape.setSize(sf::Vector2f(PLAYER_SIZE, PLAYER_SIZE));
     _shape.setFillColor(sf::Color::White);
+    _shape.setTexture(&_texture);
     _shape.setPosition(_position);
+    _soundBuffer.loadFromFile("assets/sounds/jump.ogg");
+    _jumpSound.setBuffer(_soundBuffer);
 }
 
 Player::~Player()
@@ -78,14 +83,33 @@ void Player::handleInput()
 {
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q) || sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
         _velocity.x = -MOVE_SPEED;
+        _shape.setScale(-1.0f, 1.0f);
+        if (_isOnGround) {
+            handleMovement();
+        } else {
+            handleAerialMovement();
+        }
     } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
         _velocity.x = MOVE_SPEED;
+        _shape.setScale(1.0f, 1.0f);
+        if (_isOnGround) {
+            handleMovement();
+        } else {
+            handleAerialMovement();
+        }
     } else {
         applyFriction(1.0f / 60.0f);
+        if (_isOnGround) {
+            _texture.loadFromFile("assets/img/stand.png");
+            _clock.restart();
+        } else {
+            handleAerialMovement();
+        }
     }
 
     bool spaceCurrentlyPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Space);
     if (spaceCurrentlyPressed && !_spacePressed && _isOnGround) {
+        _jumpSound.play();
         jump();
     }
     _spacePressed = spaceCurrentlyPressed;
@@ -313,5 +337,42 @@ void Player::handlePlatformCollision(Platform* platform, const sf::FloatRect& pl
     } else if (minOverlap == overlapRight && _velocity.x < 0) {
         _position.x = platformBounds.left + platformBounds.width;
         _velocity.x = 0;
+    }
+}
+
+void Player::handleMovement()
+{
+    sf::Time elapsed = _clock.getElapsedTime();
+    float f = elapsed.asSeconds();
+
+    if (f < 0.2f) {
+        _texture.loadFromFile("assets/img/walk.png", sf::IntRect(0, 0, 64, 64));
+    } else if (f < 0.4f) {
+        _texture.loadFromFile("assets/img/walk.png", sf::IntRect(64, 0, 64, 64));
+    } else if (f < 0.6f) {
+        _texture.loadFromFile("assets/img/walk.png", sf::IntRect(128, 0, 64, 64));
+    } else if (f < 0.8f) {
+        _texture.loadFromFile("assets/walk.png", sf::IntRect(192, 0, 64, 64));
+    } else if (f < 1.0f) {
+        _texture.loadFromFile("assets/img/walk.png", sf::IntRect(256, 0, 64, 64));
+    } else if (f < 1.2f) {
+        _texture.loadFromFile("assets/img/walk.png", sf::IntRect(320, 0, 64, 64));
+    } else {
+        _clock.restart();
+    }
+}
+
+void Player::handleAerialMovement()
+{
+    if (_velocity.y < -200.0f) {
+        _texture.loadFromFile("assets/img/jump.png", sf::IntRect(0, 0, 64, 64));
+    } else if (_velocity.y < -50.0f) {
+        _texture.loadFromFile("assets/img/jump.png", sf::IntRect(64, 0, 64, 64));
+    } else if (std::abs(_velocity.y) < 50.0f) {
+        _texture.loadFromFile("assets/img/jump.png", sf::IntRect(128, 0, 64, 64));
+    } else if (_velocity.y > 50.0f && _velocity.y < 300.0f) {
+        _texture.loadFromFile("assets/img/jump.png", sf::IntRect(192, 0, 64, 64));
+    } else if (_velocity.y >= 300.0f) {
+        _texture.loadFromFile("assets/img/jump.png", sf::IntRect(256, 0, 64, 64));
     }
 }

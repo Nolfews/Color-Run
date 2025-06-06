@@ -80,7 +80,7 @@ private:
     sf::CircleShape _currentColorIndicator;
     sf::RectangleShape _colorOverlay;
     sf::View _cameraView;
-
+    sf::Music _backgroundMusic;
     bool _enemyMode;
     bool _gameOver;
     sf::Text _gameOverText;
