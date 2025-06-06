@@ -32,6 +32,7 @@ public:
     bool nextLevel();
     bool previousLevel();
     int getCurrentLevel() const;
+    bool isEnemyMode() const;
 
 private:
     void setupEventHandlers();
@@ -43,6 +44,7 @@ private:
     void cycleColor(int direction);
     void renderColorIndicators();
     void updateColorCirclesPositions();
+    void checkPlayerPlatformValidity();
     sf::Color getColorFromEnum(Color_t colorEnum);
 
 private:
@@ -56,13 +58,15 @@ private:
     int _currentColorIndex;
     sf::Font _font;
     sf::Text _colorText;
+    sf::Text _modeText;
     sf::Clock _gameClock;
     int _currentLevel;
     int _maxLevel;
     std::string _levelBasePath;
-    // Nouveaux membres pour l'affichage des couleurs
     std::vector<sf::CircleShape> _colorCircles;
     sf::CircleShape _currentColorIndicator;
+    
+    bool _enemyMode;
 };
 
 

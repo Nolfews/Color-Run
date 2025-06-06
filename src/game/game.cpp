@@ -14,7 +14,8 @@ Game::Game() :
     _window(std::make_unique<Window>(1280, 720, "Color Run")),
     _currentLevel(1),
     _maxLevel(0),
-    _levelBasePath("assets/levels/level_")
+    _levelBasePath("assets/levels/level_"),
+    _enemyMode(false)
 {
     for (const auto& entry : std::filesystem::directory_iterator("assets/levels/")) {
         const std::string& path = entry.path().string();
@@ -73,6 +74,11 @@ int Game::getCurrentLevel() const
     return _currentLevel;
 }
 
+bool Game::isEnemyMode() const
+{
+    return _enemyMode;
+}
+
 void Game::setupEventHandlers()
 {
     _window->setKeyPressedCallback([this](sf::Keyboard::Key key) {
@@ -93,6 +99,13 @@ void Game::handleKeyPressed(sf::Keyboard::Key key)
         nextLevel();
     } else if (key == sf::Keyboard::Down) {
         previousLevel();
+    } else if (key == sf::Keyboard::Tab) {
+        _enemyMode = !_enemyMode;
+        _modeText.setString(_enemyMode ? "Mode: Ennemis (Tab pour changer)" : "Mode: Plateformes (Tab pour changer)");
+        std::cout << "Mode switched to: " << (_enemyMode ? "Enemy mode" : "Platform mode") << std::endl;
+        
+        // Vérifier si le joueur est toujours sur une plateforme valide
+        checkPlayerPlatformValidity();
     }
 }
 
@@ -109,7 +122,13 @@ bool Game::previousLevel()
 
 void Game::initGameEntities()
 {
-    _availableColors = {Color_t::RED, Color_t::GREEN, Color_t::BLUE, Color_t::YELLOW, Color_t::CYAN, Color_t::MAGENTA, Color_t::WHITE};
+    // Charger une police par défaut (police système)
+    if (!_font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")) {
+        // Si la police système n'est pas disponible, utiliser une police de fallback
+        std::cout << "Warning: Could not load default font, text may not display properly" << std::endl;
+        // Créer une police par défaut vide pour éviter les erreurs
+    }
+    _availableColors = {Color_t::RED, Color_t::GREEN, Color_t::BLUE, Color_t::YELLOW, Color_t::CYAN, Color_t::MAGENTA};
     _currentColorIndex = 0;
     _colorState = std::make_shared<Color>(_availableColors[_currentColorIndex]);
     createTestPlatforms();
@@ -119,6 +138,24 @@ void Game::initGameEntities()
     _colorText.setCharacterSize(24);
     _colorText.setFillColor(sf::Color::White);
     _colorText.setPosition(10, 10);
+    
+    // Assigner la police seulement si elle est chargée
+    try {
+        _colorText.setFont(_font);
+    } catch (...) {
+        // Ignorer si la police ne peut pas être assignée
+    }
+    
+    // Initialiser le texte du mode
+    _modeText.setCharacterSize(20);
+    _modeText.setFillColor(sf::Color::Yellow);
+    _modeText.setPosition(10, 40);
+    try {
+        _modeText.setFont(_font);
+    } catch (...) {
+        // Ignorer si la police ne peut pas être assignée
+    }
+    _modeText.setString("Mode: Plateformes (Tab pour changer)");
     
     // Initialiser les cercles de couleurs
     _colorCircles.clear();
@@ -167,7 +204,7 @@ void Game::updateGame(float deltaTime)
     if (_player) {
         _player->handleInput();
         _player->update(deltaTime);
-        _player->checkPlatformCollisions(_platforms);
+        _player->checkPlatformCollisions(_platforms, _enemyMode);
     }
 }
 
@@ -179,18 +216,23 @@ void Game::renderGame()
     // }
     for (const auto& platform : _platforms) {
         if (platform) {
-            platform->draw();
+            platform->draw(_enemyMode);
         }
     }
     if (_player) {
         _player->draw(*_window->getWindow());
     }
     if (_enemy) {
-        _enemy->draw();
+        _enemy->draw(_enemyMode);
     }
     
     // Dessiner les indicateurs de couleurs
     renderColorIndicators();
+    
+    // Dessiner le texte du mode seulement si la police est chargée
+    if (_font.getInfo().family != "") {
+        _window->getWindow()->draw(_modeText);
+    }
 
     _window->display();
 }
@@ -207,6 +249,9 @@ void Game::cycleColor(int direction)
     
     // Mettre à jour la position de l'indicateur
     updateColorCirclesPositions();
+    
+    // Vérifier si le joueur est toujours sur une plateforme valide
+    checkPlayerPlatformValidity();
 }
 
 sf::Color Game::getColorFromEnum(Color_t colorEnum)
@@ -249,5 +294,39 @@ void Game::updateColorCirclesPositions()
     // Mettre à jour la position de l'indicateur de couleur actuelle
     float indicatorX = startX + _currentColorIndex * CIRCLE_SPACING - (_currentColorIndicator.getRadius());
     _currentColorIndicator.setPosition(indicatorX, INDICATOR_Y_POSITION - _currentColorIndicator.getRadius());
+}
+
+void Game::checkPlayerPlatformValidity()
+{
+    if (!_player) return;
+    
+    sf::FloatRect playerBounds = _player->getBounds();
+    bool isOnValidPlatform = false;
+    
+    // Vérifier si le joueur est sur une plateforme valide
+    for (const auto& platform : _platforms) {
+        if (!platform) continue;
+        
+        sf::FloatRect platformBounds = platform->getBounds();
+        
+        // Vérifier si le joueur est au-dessus de la plateforme (avec une petite tolérance)
+        if (playerBounds.left < platformBounds.left + platformBounds.width &&
+            playerBounds.left + playerBounds.width > platformBounds.left &&
+            playerBounds.top + playerBounds.height >= platformBounds.top &&
+            playerBounds.top + playerBounds.height <= platformBounds.top + 10.0f) {
+            
+            // Vérifier si cette plateforme peut collisionner avec le joueur
+            if (platform->shouldCollideWithPlayer(_enemyMode)) {
+                isOnValidPlatform = true;
+                break;
+            }
+        }
+    }
+    
+    // Si le joueur n'est pas sur une plateforme valide, le faire tomber
+    if (!isOnValidPlatform && _player->isOnGround()) {
+        // Force le joueur à ne plus être au sol pour qu'il tombe
+        _player->setGroundState(false);
+    }
 }
 
