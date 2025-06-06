@@ -34,10 +34,14 @@ Game::Game() :
     _cameraView.setCenter(640, 360);
     setupEventHandlers();
     loadLevel(_currentLevel);
+    _backgroundMusic.openFromFile("assets/sounds/Hajar.ogg");
+    _backgroundMusic.setLoop(true);
+    _backgroundMusic.setVolume(50);
 }
 
 void Game::run()
 {
+    _backgroundMusic.play();
     while (_window->isOpen()) {
         float deltaTime = _gameClock.restart().asSeconds();
 

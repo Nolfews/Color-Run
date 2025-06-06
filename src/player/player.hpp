@@ -10,6 +10,7 @@
 #include "../Color/Color.hpp"
 #include <memory>
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <vector>
 
 // Forward declaration
@@ -63,6 +64,8 @@ class Player {
         sf::RectangleShape _shape;
         sf::Texture _texture;
         sf::Clock _clock;
+        sf::SoundBuffer _soundBuffer;
+        sf::Sound _jumpSound;
         void applyGravity(float deltaTime);
         void applyFriction(float deltaTime);
         void updatePosition(float deltaTime);
