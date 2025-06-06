@@ -6,6 +6,7 @@
 */
 
 #include <vector>
+#include <memory>
 #include <SFML/Graphics.hpp>
 #include "../Color/Color.hpp"
 

@@ -20,7 +20,6 @@ int main()
         // Game game;
         // game.run();
 
-      
         std::shared_ptr<sf::RenderWindow> window = std::make_shared<sf::RenderWindow>(sf::VideoMode(1920, 1080), "Color Run");
         std::shared_ptr<Color> colorState = std::make_shared<Color>(Color_t::GREEN);
         sf::Event event;
