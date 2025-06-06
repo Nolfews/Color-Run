@@ -25,6 +25,7 @@ public:
 
     void setKeyPressedCallback(std::function<void(sf::Keyboard::Key)> callback);
     void setKeyReleasedCallback(std::function<void(sf::Keyboard::Key)> callback);
+    void setResizeCallback(std::function<void(unsigned int, unsigned int)> callback);
 
 private:
     std::shared_ptr<sf::RenderWindow> _window;
@@ -32,5 +33,6 @@ private:
 
     std::function<void(sf::Keyboard::Key)> _keyPressedCallback;
     std::function<void(sf::Keyboard::Key)> _keyReleasedCallback;
+    std::function<void(unsigned int, unsigned int)> _resizeCallback;
 };
 

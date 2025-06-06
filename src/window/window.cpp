@@ -9,10 +9,11 @@
 
 Window::Window(unsigned int width, unsigned int height, const std::string& title)
 {
-    _window = std::make_shared<sf::RenderWindow>(sf::VideoMode(width, height), title, sf::Style::Fullscreen);
+    _window = std::make_shared<sf::RenderWindow>(sf::VideoMode(width, height), title, sf::Style::Default);
     _window->setFramerateLimit(60);
     _keyPressedCallback = nullptr;
     _keyReleasedCallback = nullptr;
+    _resizeCallback = nullptr;
 }
 
 Window::~Window()
@@ -49,6 +50,9 @@ void Window::handleEvents()
         if (_event.type == sf::Event::KeyReleased && _keyReleasedCallback) {
             _keyReleasedCallback(_event.key.code);
         }
+        if (_event.type == sf::Event::Resized && _resizeCallback) {
+            _resizeCallback(_event.size.width, _event.size.height);
+        }
     }
 }
 
@@ -65,4 +69,9 @@ void Window::setKeyPressedCallback(std::function<void(sf::Keyboard::Key)> callba
 void Window::setKeyReleasedCallback(std::function<void(sf::Keyboard::Key)> callback)
 {
     _keyReleasedCallback = callback;
+}
+
+void Window::setResizeCallback(std::function<void(unsigned int, unsigned int)> callback)
+{
+    _resizeCallback = callback;
 }

@@ -6,7 +6,9 @@
 */
 
 #include "player.hpp"
+#include "../platform/Platform.hpp"
 #include <iostream>
+#include <algorithm>
 
 Player::Player(float startX, float startY)
     : _position(startX, startY)
@@ -211,10 +213,74 @@ void Player::updateVisuals()
             case Color_t::BLUE:
                 _shape.setFillColor(sf::Color::Blue);
                 break;
+            case Color_t::YELLOW:
+                _shape.setFillColor(sf::Color::Yellow);
+                break;
+            case Color_t::CYAN:
+                _shape.setFillColor(sf::Color::Cyan);
+                break;
+            case Color_t::MAGENTA:
+                _shape.setFillColor(sf::Color::Magenta);
+                break;
             case Color_t::WHITE:
+                _shape.setFillColor(sf::Color::White);
+                break;
+            case Color_t::BLACK:
+                _shape.setFillColor(sf::Color::Black);
+                break;
             default:
                 _shape.setFillColor(sf::Color::White);
                 break;
         }
+    }
+}
+
+void Player::checkPlatformCollisions(const std::vector<std::unique_ptr<Platform>>& platforms)
+{
+    sf::FloatRect playerBounds = getBounds();
+
+    float searchRadius = PLAYER_SIZE * 2.0f;
+    sf::FloatRect searchArea(
+        _position.x - searchRadius,
+        _position.y - searchRadius,
+        PLAYER_SIZE + 2 * searchRadius,
+        PLAYER_SIZE + 2 * searchRadius
+    );
+    for (const auto& platform : platforms) {
+        if (!platform) continue;
+        sf::FloatRect platformBounds = platform->getBounds();
+        if (!searchArea.intersects(platformBounds)) {
+            continue;
+        }
+        if (!platform->shouldCollideWithPlayer()) {
+            continue;
+        }
+        if (playerBounds.intersects(platformBounds)) {
+            handlePlatformCollision(platform.get(), platformBounds);
+        }
+    }
+}
+
+void Player::handlePlatformCollision(Platform* platform, const sf::FloatRect& platformBounds)
+{
+    sf::FloatRect playerBounds = getBounds();
+    float overlapLeft = (playerBounds.left + playerBounds.width) - platformBounds.left;
+    float overlapRight = (platformBounds.left + platformBounds.width) - playerBounds.left;
+    float overlapTop = (playerBounds.top + playerBounds.height) - platformBounds.top;
+    float overlapBottom = (platformBounds.top + platformBounds.height) - playerBounds.top;
+    float minOverlap = std::min({overlapLeft, overlapRight, overlapTop, overlapBottom});
+    if (minOverlap == overlapTop && _velocity.y > 0) {
+        _position.y = platformBounds.top - PLAYER_SIZE;
+        _velocity.y = 0;
+        _isOnGround = true;
+    } else if (minOverlap == overlapBottom && _velocity.y < 0) {
+        _position.y = platformBounds.top + platformBounds.height;
+        _velocity.y = 0;
+    } else if (minOverlap == overlapLeft && _velocity.x > 0) {
+        _position.x = platformBounds.left - PLAYER_SIZE;
+        _velocity.x = 0;
+    } else if (minOverlap == overlapRight && _velocity.x < 0) {
+        _position.x = platformBounds.left + platformBounds.width;
+        _velocity.x = 0;
     }
 }

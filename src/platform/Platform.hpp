@@ -21,8 +21,11 @@ class Platform {
 
         sf::Vector2f getPosition() const;
         sf::RectangleShape getShape() const;
+        sf::FloatRect getBounds() const;
         void setPosition(int x, int y);
         void draw();
+        bool shouldCollideWithPlayer() const;
+        Color_t getColor() const;
 
     private:
         int _x;
