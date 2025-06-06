@@ -81,17 +81,27 @@ bool Player::isOnGround() const
 
 void Player::handleInput()
 {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q) || sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+    bool movingLeft = sf::Keyboard::isKeyPressed(sf::Keyboard::Q) || sf::Keyboard::isKeyPressed(sf::Keyboard::A);
+    bool movingRight = sf::Keyboard::isKeyPressed(sf::Keyboard::D);
+    bool facingRight = _shape.getScale().x > 0;
+
+    if (movingLeft) {
         _velocity.x = -MOVE_SPEED;
-        _shape.setScale(-1.0f, 1.0f);
+        if (facingRight) {
+            _position.x += PLAYER_SIZE;
+            _shape.setScale(-1.0f, 1.0f);
+        }
         if (_isOnGround) {
             handleMovement();
         } else {
             handleAerialMovement();
         }
-    } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+    } else if (movingRight) {
         _velocity.x = MOVE_SPEED;
-        _shape.setScale(1.0f, 1.0f);
+        if (!facingRight) {
+            _position.x -= PLAYER_SIZE;
+            _shape.setScale(1.0f, 1.0f);
+        }
         if (_isOnGround) {
             handleMovement();
         } else {
@@ -352,7 +362,7 @@ void Player::handleMovement()
     } else if (f < 0.6f) {
         _texture.loadFromFile("assets/img/walk.png", sf::IntRect(128, 0, 64, 64));
     } else if (f < 0.8f) {
-        _texture.loadFromFile("assets/walk.png", sf::IntRect(192, 0, 64, 64));
+        _texture.loadFromFile("assets/img/walk.png", sf::IntRect(192, 0, 64, 64));
     } else if (f < 1.0f) {
         _texture.loadFromFile("assets/img/walk.png", sf::IntRect(256, 0, 64, 64));
     } else if (f < 1.2f) {
