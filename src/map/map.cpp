@@ -74,13 +74,17 @@ bool Map::loadFromFile(const std::string &levelPath)
             tile.sprite.setPosition(x * _tileSize, y * _tileSize);
             tile.hasTexture = false;
 
-            if (tile.type != EMPTY && tile.type != INVISIBLE_BOUNDARY) {
+            // Modified condition to exclude SPAWN from having an outline
+            if (tile.type != EMPTY && tile.type != INVISIBLE_BOUNDARY && tile.type != SPAWN) {
                 tile.shape.setOutlineThickness(1.0f);
                 tile.shape.setOutlineColor(sf::Color(30, 30, 30));
             }
 
             if (tile.type == SPAWN) {
                 _spawnPosition = sf::Vector2f(x * _tileSize, y * _tileSize);
+                // Make sure spawn tiles are completely transparent
+                tile.shape.setFillColor(sf::Color::Transparent);
+                tile.shape.setOutlineThickness(0.0f);
             }
 
             if (tile.type == ENEMY) {
@@ -166,7 +170,7 @@ std::vector<std::vector<Tile>> &Map::getTiles()
 void Map::initializeTileColors()
 {
     _tileColors[EMPTY]       = sf::Color::Transparent;
-    _tileColors[SPAWN]       = sf::Color(50, 205, 50);    // Lime Green
+    _tileColors[SPAWN]       = sf::Color::Transparent;
     _tileColors[FINISH]      = sf::Color(255, 215, 0);    // Gold
     _tileColors[TRAP]        = sf::Color(139, 0, 0);      // Dark Red
     _tileColors[ENEMY]       = sf::Color(34, 241, 53);    // Green (like Enemy)
