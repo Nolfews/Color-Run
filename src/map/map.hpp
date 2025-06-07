@@ -38,6 +38,8 @@ struct Tile {
     TileType type;
     Color_t color;
     sf::RectangleShape shape;
+    sf::Sprite sprite;
+    bool hasTexture = false;
 };
 
 class Map {
@@ -56,15 +58,21 @@ public:
     unsigned int getWidth() const;
     unsigned int getHeight() const;
     unsigned int getTileSize() const;
+    
+    // Méthodes pour les textures
+    void setTileTextureAt(int x, int y, const sf::Texture& texture);
+    void loadTileTextures(const std::string& texturesPath); // Pour charger des textures prédéfinies
 
 private:
     void initializeTileColors();
     TileType charToTileType(char c);
     sf::Color getTileColor(TileType type);
     sf::Color convertColor(Color_t color);
+    void setTileTexture(Tile& tile, const sf::Texture& texture); // Nouvelle méthode
 
     std::vector<std::vector<Tile>> _tiles;
     std::map<TileType, sf::Color> _tileColors;
+    std::map<TileType, sf::Texture> _tileTextures; // Stockage des textures
     sf::Vector2f _spawnPosition;
     std::vector<sf::Vector2f> _enemyPositions;
     std::vector<sf::Vector2f> _coinPositions;

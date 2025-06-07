@@ -10,6 +10,27 @@
 Map::Map(const std::string &levelPath, unsigned int tileSize) : _tileSize(tileSize)
 {
     initializeTileColors();
+    
+    // Charger la texture des traps
+    if (!_tileTextures[TRAP].loadFromFile("assets/img/trap.png")) {
+        std::cerr << "Warning: Could not load trap texture from assets/img/trap.png" << std::endl;
+    }
+    
+    // Charger la texture des plateformes colorées (sauf noir et blanc)
+    sf::Texture platformTexture;
+    if (!platformTexture.loadFromFile("assets/img/platforme.png")) {
+        std::cerr << "Warning: Could not load platform texture from assets/img/platforme.png" << std::endl;
+    } else {
+        std::cout << "Platform texture loaded successfully!" << std::endl;
+        // Charger la même texture pour toutes les plateformes colorées (sauf noir et blanc)
+        _tileTextures[RED_TILE].loadFromFile("assets/img/platforme.png");
+        _tileTextures[GREEN_TILE].loadFromFile("assets/img/platforme.png");
+        _tileTextures[BLUE_TILE].loadFromFile("assets/img/platforme.png");
+        _tileTextures[YELLOW_TILE].loadFromFile("assets/img/platforme.png");
+        _tileTextures[CYAN_TILE].loadFromFile("assets/img/platforme.png");
+        _tileTextures[MAGENTA_TILE].loadFromFile("assets/img/platforme.png");
+        std::cout << "All platform textures loaded!" << std::endl;
+    }
 
     if (!loadFromFile(levelPath)) {
         std::cerr << "Error loading level file: " << levelPath << std::endl;
@@ -50,6 +71,9 @@ bool Map::loadFromFile(const std::string &levelPath)
             tile.shape.setPosition(x * _tileSize, y * _tileSize);
             tile.shape.setFillColor(getTileColor(tile.type));
 
+            tile.sprite.setPosition(x * _tileSize, y * _tileSize);
+            tile.hasTexture = false;
+
             if (tile.type != EMPTY && tile.type != INVISIBLE_BOUNDARY) {
                 tile.shape.setOutlineThickness(1.0f);
                 tile.shape.setOutlineColor(sf::Color(30, 30, 30));
@@ -65,6 +89,18 @@ bool Map::loadFromFile(const std::string &levelPath)
 
             if (tile.type == COIN) {
                 _coinPositions.push_back(sf::Vector2f(x * _tileSize, y * _tileSize));
+            }
+
+            // Appliquer la texture aux traps si elle est chargée
+            if (tile.type == TRAP && _tileTextures.find(TRAP) != _tileTextures.end()) {
+                setTileTexture(tile, _tileTextures[TRAP]);
+            }
+
+            // Appliquer la texture aux plateformes colorées (sauf noir et blanc) si elle est chargée
+            if ((tile.type == RED_TILE || tile.type == GREEN_TILE || tile.type == BLUE_TILE ||
+                 tile.type == YELLOW_TILE || tile.type == CYAN_TILE || tile.type == MAGENTA_TILE) && 
+                 _tileTextures.find(tile.type) != _tileTextures.end()) {
+                setTileTexture(tile, _tileTextures[tile.type]);
             }
 
             row.push_back(tile);
@@ -97,6 +133,10 @@ void Map::draw(std::shared_ptr<sf::RenderWindow> window, std::shared_ptr<Color> 
                 }
                 if (shouldDraw) {
                     window->draw(tile.shape);
+                    // Dessiner la texture par-dessus si elle existe
+                    if (tile.hasTexture) {
+                        window->draw(tile.sprite);
+                    }
                 }
             }
         }
@@ -192,6 +232,48 @@ Color_t Map::getTileColorEnum(int x, int y) const
         }
     }
     return WHITE;
+}
+
+void Map::setTileTexture(Tile& tile, const sf::Texture& texture)
+{
+    tile.sprite.setTexture(texture);
+    
+    // Adapter la taille du sprite à la taille de la tile
+    sf::Vector2u textureSize = texture.getSize();
+    float scaleX = static_cast<float>(_tileSize) / textureSize.x;
+    float scaleY = static_cast<float>(_tileSize) / textureSize.y;
+    tile.sprite.setScale(scaleX, scaleY);
+    
+    tile.hasTexture = true;
+}
+
+void Map::setTileTextureAt(int x, int y, const sf::Texture& texture)
+{
+    if (y >= 0 && y < static_cast<int>(_tiles.size())) {
+        if (x >= 0 && x < static_cast<int>(_tiles[y].size())) {
+            setTileTexture(_tiles[y][x], texture);
+        }
+    }
+}
+
+void Map::loadTileTextures(const std::string& texturesPath)
+{
+    // Exemple : charger des textures pour certains types de tiles
+    // Vous pouvez adapter selon vos besoins
+    
+    // Exemple pour COIN
+    if (_tileTextures.find(COIN) == _tileTextures.end()) {
+        if (_tileTextures[COIN].loadFromFile(texturesPath + "/coins.png")) {
+            // Appliquer la texture à toutes les tiles COIN existantes
+            for (auto& row : _tiles) {
+                for (auto& tile : row) {
+                    if (tile.type == COIN) {
+                        setTileTexture(tile, _tileTextures[COIN]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 unsigned int Map::getWidth() const
