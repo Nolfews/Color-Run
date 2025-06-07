@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include "../player/player.hpp"
 
 #ifndef COINS_HPP_

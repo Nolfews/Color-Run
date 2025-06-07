@@ -6,6 +6,7 @@
 */
 
 #include <iostream>
+#include <SFML/Audio.hpp>
 #include "Coins.hpp"
 
 Coins::Coins(std::shared_ptr<sf::RenderWindow> window, std::shared_ptr<Player> player) : _x(0), _y(0), _value(1), _isCollected(false), _window(window), _player(player)
@@ -75,6 +76,25 @@ void Coins::setValue(int value)
 void Coins::setCollected(bool collected)
 {
     _isCollected = collected;
+
+    if (collected) {
+        static sf::SoundBuffer buffer;
+        static sf::Sound sound;
+        static bool loaded = false;
+        
+        if (!loaded) {
+            if (buffer.loadFromFile("assets/sounds/coin.mp3")) {
+                sound.setBuffer(buffer);
+                loaded = true;
+            }
+        }
+        
+        if (loaded) {
+            sound.setVolume(100);
+            sound.play();
+        }
+        _player->addScore(_value);
+    }
 }
 
 void Coins::draw()
@@ -118,8 +138,8 @@ void Coins::checkPlayerCollision()
         sf::FloatRect coinBounds = _shape.getGlobalBounds();
 
         if (coinBounds.intersects(playerBounds)) {
-            _isCollected = true;
-            _player->addScore(_value);
+            setCollected(true);
+            // _player->addScore(_value);
             _clock.restart();
         }
     }
