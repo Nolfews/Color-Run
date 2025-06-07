@@ -84,8 +84,10 @@ void Map::draw(std::shared_ptr<sf::RenderWindow> window, std::shared_ptr<Color> 
             bool shouldDraw = false;
 
             if (tile.type != EMPTY && tile.type != INVISIBLE_BOUNDARY && tile.type != COIN) {
-                if (tile.type == SPAWN || tile.type == FINISH || tile.type == TRAP) {
+                if (tile.type == SPAWN || tile.type == FINISH) {
                     shouldDraw = true;
+                } else if (tile.type == TRAP) {
+                    shouldDraw = enemyMode;
                 } else if (enemyMode) {
                     shouldDraw = (tile.color == BLACK || tile.color == WHITE);
                 } else if (colorState) {

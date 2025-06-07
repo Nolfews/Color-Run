@@ -51,22 +51,20 @@ void Enemy::setPosition(int x, int y)
 {
     _x = x;
     _y = y;
+    _shape.setPosition(_x, _y);
 }
 
 void Enemy::draw()
 {
-    if (_colorState->getColor() != WHITE)
-        return;
-    _window->draw(_shape);
+
 }
 
 void Enemy::draw(bool enemyMode)
 {
     if (enemyMode) {
+
         _window->draw(_shape);
     } else {
-        if (_colorState->getColor() == WHITE) {
-            _window->draw(_shape);
-        }
+        return;
     }
 }
